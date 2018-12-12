@@ -44,6 +44,7 @@ def main():
         type(model).__call__ = run_infer
         print("Loaded TensorRT inference engine {}".format(args.engine))
     else:
+        model.to_gpu()
         print("Run Chainer based inference")
 
     # Run inference once and get detections
