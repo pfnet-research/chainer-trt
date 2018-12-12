@@ -1,0 +1,1 @@
+{"inputs": ["input-0"], "outputs": ["ResizeImages-0-1"], "layers": [{"type": "input", "name": "input-0", "shape": [3, 1, 2]}, {"type": "ResizeImages", "name": "ResizeImages-0-1", "source": "input-0", "n_channels": 3, "input_hw": [1, 2], "output_hw": [2, 4]}]}

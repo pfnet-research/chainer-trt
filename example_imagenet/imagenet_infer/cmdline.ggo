@@ -1,0 +1,12 @@
+# Copyright (c) 2018 Preferred Networks, Inc. All rights reserved.
+
+package "imagenet_infer"
+version "0.1"
+
+option "model"      m "path to the engine file built by imagenet_tensorrt_builder" string typestr="filename" yes
+option "gpu"        g "GPU ID" int default="0" no
+option "image"      i "path to input image" string typestr="filename" yes
+option "n-try"      n "specify how many times you'd like to run inference in order to calculate average time" int no default="1"
+option "label"      l "path to label file" string typestr="filename" no default="example_imagenet/labels.txt"
+option "batch-size" b "batch size" int default="1" no
+option "prof"       p "layer-wise profiling" values="csv","md" no

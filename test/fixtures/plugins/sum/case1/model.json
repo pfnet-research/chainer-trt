@@ -1,0 +1,1 @@
+{"inputs": ["input-0"], "outputs": [["Sum-0-1", "Sum-0-1"]], "layers": [{"type": "input", "name": "input-0", "rank": -2, "shape": [8, 12, 12]}, {"type": "Sum", "name": "Sum-0-1", "rank": 0, "source": "input-0", "shape": [8, 12, 12]}]}

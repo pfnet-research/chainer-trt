@@ -1,0 +1,12 @@
+# Copyright (c) 2018 Preferred Networks, Inc. All rights reserved.
+
+package "tensorrt_builder"
+version "0.1"
+
+option "dir"       i "path to directory name contains model json and weights exported by caffe2tensorrt.py" string typestr="filename" yes
+option "gpu"       g "GPU ID" int default="0" no
+option "model"     o "specify where to save the built model" string typestr="filename" yes
+option "mode"      m "specify mode" values="fp32","fp16" default="fp32" no
+option "max-batch" b "specify the maximum batch size this model is supposed to receive" int typestr="batch-size" default="1" no
+option "workspace" w "specify workspace size in GB that TensorRT is allowed to use while building the network" int typestr="GB" default="4" no
+

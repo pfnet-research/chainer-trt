@@ -1,0 +1,1 @@
+{"inputs": ["named_input"], "outputs": [["AddConstant-0-1", "named_out"]], "layers": [{"type": "input", "name": "named_input", "rank": -2, "shape": [3, 16, 16]}, {"type": "AddConstant", "name": "AddConstant-0-1", "rank": 0, "source": "named_input", "constant_weights_file": "AddConstant-0-1_constant.weights"}]}

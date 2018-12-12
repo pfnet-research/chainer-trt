@@ -1,0 +1,12 @@
+# Copyright (c) 2018 Preferred Networks, Inc. All rights reserved.
+
+package "imagenet_infer_fast"
+version "0.1"
+
+option "model"      m "path to the engine file built by imagenet_tensorrt_builder" string typestr="filename" yes
+option "gpu"        g "GPU ID" int default="0" no
+option "images"     i "path to image list file" string typestr="filename" yes
+option "base-path"  p "path to image base path" string typestr="filename" yes
+option "batch"      b "batch size" int default="1" no
+option "n-stream"   n "number of concurrent execution" int default="1" no
+
