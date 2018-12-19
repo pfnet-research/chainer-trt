@@ -16,7 +16,6 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-#include "include/plugins/resize_argmax.hpp"
 #include "include/plugins/sum.hpp"
 #include "include/plugins/where.hpp"
 
@@ -52,34 +51,6 @@ namespace internal {
         nvinfer1::Weights w = weights->load_weights_as(
           model_dir + "/" + input_tensor, nvinfer1::DataType::kFLOAT);
         return network->addConstant(shapes_to_dims(shape), w);
-    }
-
-    nvinfer1::ILayer* build_resize_argmax(network_def network,
-                                          const picojson::object& params,
-                                          nvinfer1::DataType dt,
-                                          const name_tensor_map& tensor_names) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto input_hw = param_get<picojson::array>(params, "input_hw");
-        auto output_hw = param_get<picojson::array>(params, "output_hw");
-
-        const int n_channels = (int)param_get<double>(params, "n_channels");
-        const int in_h = (int)input_hw[0].get<double>();
-        const int in_w = (int)input_hw[1].get<double>();
-        const int out_h = (int)output_hw[0].get<double>();
-        const int out_w = (int)output_hw[1].get<double>();
-        if(in_h <= 1 || in_w <= 1)
-            throw std::range_error("resize input_hw must be larger than 1");
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p =
-          new plugin::resize_argmax(n_channels, in_h, in_w, out_h, out_w);
-        return network->addPlugin(&input, 1, *p);
     }
 
     nvinfer1::ILayer* build_linear_interpolate(
@@ -513,11 +484,6 @@ namespace internal {
         return network->addUnary(*input, op);
     }
 
-    nvinfer1::ILayer* build_getitem(network_def network,
-                                    const picojson::object& params,
-                                    const name_tensor_map& tensor_names) {
-    }
-
     nvinfer1::ILayer* build_sum(network_def network,
                                 const picojson::object& params,
                                 nvinfer1::DataType dt,
@@ -679,12 +645,6 @@ namespace internal {
                 l = build_concat(build_cxt.network, layer_params, tensor_names);
             else if(type == "Unary")
                 l = build_unary(build_cxt.network, layer_params, tensor_names);
-            else if(type == "GetItem")
-                l =
-                  build_getitem(build_cxt.network, layer_params, tensor_names);
-            else if(type == "ResizeArgmax")
-                l = build_resize_argmax(build_cxt.network, layer_params, dt,
-                                        tensor_names);
             else if(type == "Sum")
                 l =
                   build_sum(build_cxt.network, layer_params, dt, tensor_names);

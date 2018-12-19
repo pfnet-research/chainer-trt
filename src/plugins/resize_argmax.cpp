@@ -7,6 +7,7 @@
 
 #include <cuda_runtime.h>
 
+#include <chainer_trt/external/picojson_helper.hpp>
 #include "include/cuda/cuda_kernels.hpp"
 #include "include/plugins/resize_argmax.hpp"
 
@@ -36,6 +37,34 @@ namespace plugin {
         out_h = p->out_h;
         out_w = p->out_w;
     };
+
+    nvinfer1::ILayer* resize_argmax::build_layer(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        (void)dt;
+
+        auto source = param_get<std::string>(layer_params, "source");
+        auto input_hw = param_get<picojson::array>(layer_params, "input_hw");
+        auto output_hw = param_get<picojson::array>(layer_params, "output_hw");
+
+        int n_channels = (int)param_get<double>(layer_params, "n_channels");
+        int in_h = (int)input_hw[0].get<double>();
+        int in_w = (int)input_hw[1].get<double>();
+        int out_h = (int)output_hw[0].get<double>();
+        int out_w = (int)output_hw[1].get<double>();
+        if(in_h <= 1 || in_w <= 1)
+            throw std::range_error("resize input_hw must be larger than 1");
+
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p =
+          new plugin::resize_argmax(n_channels, in_h, in_w, out_h, out_w);
+        return network->addPlugin(&input, 1, *p);
+    }
 
     nvinfer1::Dims
     resize_argmax::getOutputDimensions(int index, const nvinfer1::Dims *inputs,

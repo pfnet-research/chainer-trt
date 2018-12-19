@@ -71,6 +71,8 @@ namespace plugin {
                                  leaky_relu::deserialize);
         add_builder_deserializer("ResizeImages", resize::build_layer,
                                  resize::deserialize);
+        add_builder_deserializer("ResizeArgmax", resize_argmax::build_layer,
+                                 resize_argmax::deserialize);
         add_builder_deserializer("GetItem", get_item::build_layer,
                                  get_item::deserialize);
     }
@@ -93,8 +95,6 @@ namespace plugin {
 
         // No worries about memory leak.
         // TensorRT 5 releases plugin objects internally (different from 4)
-        else if(str_match(layerName, "ResizeArgmax"))
-            return new resize_argmax(buf, len);
         else if(str_match(layerName, "Sum"))
             return new sum(buf, len);
         else if(str_match(layerName, "Where"))
