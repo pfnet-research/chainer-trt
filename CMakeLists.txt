@@ -73,3 +73,7 @@ endif()
 if(WITH_EXAMPLES)
     add_subdirectory(example_imagenet)
 endif()
+
+if(WITH_EXAMPLES)
+    add_subdirectory(example_external_plugin)
+endif()

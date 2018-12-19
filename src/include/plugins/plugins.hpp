@@ -12,6 +12,8 @@
 #include <NvInfer.h>
 #pragma GCC diagnostic pop
 
+#include "chainer_trt/plugin.hpp"
+
 #include "argmax.hpp"
 #include "broadcast_to.hpp"
 #include "constant_elementwise.hpp"
@@ -23,18 +25,3 @@
 #include "slice.hpp"
 #include "sum.hpp"
 #include "where.hpp"
-
-namespace chainer_trt {
-namespace plugin {
-    // For network deserializer (as IPluginFactory).
-    class plugin_factory : public nvinfer1::IPluginFactory {
-
-    public:
-        plugin_factory() {}
-
-        nvinfer1::IPlugin* createPlugin(const char* layerName,
-                                        const void* serialData,
-                                        size_t serialLength) override;
-    };
-}
-}

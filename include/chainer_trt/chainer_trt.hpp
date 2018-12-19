@@ -18,6 +18,8 @@
 
 #include <cuda_runtime_api.h>
 
+#include "plugin.hpp"
+
 namespace chainer_trt {
 namespace internal {
     class build_context;
@@ -133,27 +135,41 @@ class model {
     void set_n_inputs_and_outputs();
 
 public:
-    static std::shared_ptr<model> build_fp32(const std::string& model_dir,
-                                             double workspace_gb = 6.0,
-                                             int max_batch_size = 1);
+    static std::shared_ptr<model>
+    build_fp32(const std::string& model_dir, double workspace_gb = 6.0,
+               int max_batch_size = 1,
+               std::shared_ptr<plugin::plugin_factory> factory =
+                 std::make_shared<plugin::plugin_factory>());
 
-    static std::shared_ptr<model> build_fp16(const std::string& model_dir,
-                                             double workspace_gb = 6.0,
-                                             int max_batch_size = 1);
+    static std::shared_ptr<model>
+    build_fp16(const std::string& model_dir, double workspace_gb = 6.0,
+               int max_batch_size = 1,
+               std::shared_ptr<plugin::plugin_factory> factory =
+                 std::make_shared<plugin::plugin_factory>());
 
     static std::shared_ptr<model>
     build_int8(const std::string& model_dir,
                std::shared_ptr<calibration_stream> calib_stream,
                double workspace_gb = 6.0, int max_batch_size = 1,
-               const std::string& out_cache_file = "");
+               const std::string& out_cache_file = "",
+               std::shared_ptr<plugin::plugin_factory> factory =
+                 std::make_shared<plugin::plugin_factory>());
 
     static std::shared_ptr<model>
     build_int8_cache(const std::string& model_dir,
                      const std::string& in_cache_file,
-                     double workspace_gb = 6.0, int max_batch_size = 1);
+                     double workspace_gb = 6.0, int max_batch_size = 1,
+                     std::shared_ptr<plugin::plugin_factory> factory =
+                       std::make_shared<plugin::plugin_factory>());
 
-    static std::shared_ptr<model> deserialize(std::istream& ist);
-    static std::shared_ptr<model> deserialize(const std::string& model_file);
+    static std::shared_ptr<model>
+    deserialize(std::istream& ist,
+                std::shared_ptr<plugin::plugin_factory> factory =
+                  std::make_shared<plugin::plugin_factory>());
+    static std::shared_ptr<model>
+    deserialize(const std::string& model_file,
+                std::shared_ptr<plugin::plugin_factory> factory =
+                  std::make_shared<plugin::plugin_factory>());
 
     void serialize(std::ostream& ost) const;
     void serialize(const std::string& model_file) const;

@@ -14,6 +14,7 @@
 #include <cuda_fp16.h>
 
 #include "chainer_trt/chainer_trt.hpp"
+#include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
 namespace chainer_trt {
@@ -50,6 +51,16 @@ layer_not_implemented::layer_not_implemented(const std::string& layer_name,
     oss << "Layer type " << layer_type << " is not supported yet (";
     oss << layer_name << ")";
     err = oss.str();
+}
+
+// picojson_helper.hpp
+template <>
+int param_get<int>(const picojson::object& params, const std::string& key) {
+    return (int)param_get<double>(params, key);
+}
+template <>
+float param_get<float>(const picojson::object& params, const std::string& key) {
+    return (float)param_get<double>(params, key);
 }
 
 namespace internal {

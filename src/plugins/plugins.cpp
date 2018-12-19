@@ -5,6 +5,8 @@
 #include <memory>
 
 #include "chainer_trt/chainer_trt.hpp"
+#include "chainer_trt/external/picojson_helper.hpp"
+#include "chainer_trt/plugin.hpp"
 
 #include "../include/plugins/plugins.hpp"
 
@@ -13,6 +15,20 @@ namespace plugin {
 
     static bool str_match(const char* str, const char* kw) {
         return std::string(str).find(kw) != std::string::npos;
+    }
+
+    plugin_factory::plugin_factory() {
+        add_builder_deserializer("Shift", shift::build_layer,
+                                 shift::deserialize);
+    }
+
+    nvinfer1::ILayer* plugin_factory::build_plugin(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        auto type = param_get<std::string>(layer_params, "type");
+        auto f = plugin_builders[type];
+        return f(network, layer_params, dt, tensor_names, model_dir);
     }
 
     nvinfer1::IPlugin* plugin_factory::createPlugin(const char* layerName,

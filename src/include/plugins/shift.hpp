@@ -20,6 +20,11 @@ namespace plugin {
         shift(nvinfer1::Dims in_dim, int _kw, int _kh, int _dx, int _dy);
         shift(const void* buf, size_t size);
 
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
+
         int get_kw() const { return kw; }
         int get_kh() const { return kh; }
         int get_dx() const { return dx; }
