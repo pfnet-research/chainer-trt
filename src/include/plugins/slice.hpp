@@ -4,11 +4,10 @@
 
 #pragma once
 
-#include <cassert>
 #include <experimental/optional>
 #include <vector>
 
-#include "plugins_base.hpp"
+#include <chainer_trt/plugin.hpp>
 
 namespace chainer_trt {
 namespace plugin {

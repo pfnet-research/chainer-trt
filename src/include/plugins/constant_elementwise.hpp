@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "plugins_base.hpp"
+#include <chainer_trt/plugin.hpp>
 
 namespace chainer_trt {
 namespace plugin {
