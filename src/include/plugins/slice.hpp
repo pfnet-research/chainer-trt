@@ -64,6 +64,10 @@ namespace plugin {
 
         get_item(nvinfer1::Dims _input_dims, const std::vector<slice>& _slices);
         get_item(const void* buf, size_t size);
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
 
         int initialize() override;
         void terminate() override;

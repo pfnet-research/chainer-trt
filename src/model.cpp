@@ -17,7 +17,6 @@
 #include "include/chainer_trt_impl.hpp"
 
 #include "include/plugins/resize_argmax.hpp"
-#include "include/plugins/slice.hpp"
 #include "include/plugins/sum.hpp"
 #include "include/plugins/where.hpp"
 
@@ -517,45 +516,6 @@ namespace internal {
     nvinfer1::ILayer* build_getitem(network_def network,
                                     const picojson::object& params,
                                     const name_tensor_map& tensor_names) {
-        const auto source = param_get<std::string>(params, "source");
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        auto err_msg =
-          "Each of GetItem parameter has to be "
-          "3-element list, or a single integer."
-          "Fix ModelRetriever";
-
-        // Parse array of array to list of shape
-        const auto json_slices = param_get<picojson::array>(params, "slices");
-        std::vector<plugin::slice> slices;
-        for(const picojson::value& json_s : json_slices) {
-            if(json_s.is<picojson::array>()) {
-                auto json_slice = json_s.get<picojson::array>();
-                if(json_slice.size() != 3)
-                    throw std::runtime_error(err_msg);
-
-                auto getvalornull = [](const picojson::value& o) {
-                    return o.is<picojson::null>() ? plugin::slice::optint()
-                                                  : (int)o.get<double>();
-                };
-                plugin::slice s(getvalornull(json_slice[0]),
-                                getvalornull(json_slice[1]),
-                                getvalornull(json_slice[2]));
-                slices.push_back(s);
-            } else if(json_s.is<double>()) {
-                slices.push_back(plugin::slice((int)json_s.get<double>()));
-            } else {
-                throw std::runtime_error(err_msg);
-            }
-        }
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::get_item(input->getDimensions(), slices);
-        assert(input->getDimensions().nbDims ==
-               static_cast<signed>(slices.size()));
-        return network->addPlugin(&input, 1, *p);
     }
 
     nvinfer1::ILayer* build_sum(network_def network,

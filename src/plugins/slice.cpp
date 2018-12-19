@@ -8,6 +8,7 @@
 #include <cuda_runtime.h>
 
 #include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
 
 #include "include/cuda/cuda_kernels.hpp"
 #include "include/plugins/slice.hpp"
@@ -75,6 +76,53 @@ namespace plugin {
             throw std::runtime_error(
               "GetItem deserialization error: serialization size mismatch. "
               "Please try rebuilding the engine file");
+    }
+
+    nvinfer1::ILayer* get_item::build_layer(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        (void)dt;
+        (void)model_dir;
+
+        const auto source = param_get<std::string>(layer_params, "source");
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        auto err_msg = "Each of GetItem parameter has to be "
+                       "3-element list, or a single integer."
+                       "Fix ModelRetriever";
+
+        // Parse array of array to list of shape
+        auto json_slices = param_get<picojson::array>(layer_params, "slices");
+        std::vector<plugin::slice> slices;
+        for(const picojson::value& json_s : json_slices) {
+            if(json_s.is<picojson::array>()) {
+                auto json_slice = json_s.get<picojson::array>();
+                if(json_slice.size() != 3)
+                    throw std::runtime_error(err_msg);
+
+                auto getvalornull = [](const picojson::value& o) {
+                    return o.is<picojson::null>() ? plugin::slice::optint()
+                                                  : (int)o.get<double>();
+                };
+                plugin::slice s(getvalornull(json_slice[0]),
+                                getvalornull(json_slice[1]),
+                                getvalornull(json_slice[2]));
+                slices.push_back(s);
+            } else if(json_s.is<double>()) {
+                slices.push_back(plugin::slice((int)json_s.get<double>()));
+            } else {
+                throw std::runtime_error(err_msg);
+            }
+        }
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p = new plugin::get_item(input->getDimensions(), slices);
+        assert(input->getDimensions().nbDims ==
+               static_cast<signed>(slices.size()));
+        return network->addPlugin(&input, 1, *p);
     }
 
     int get_item::initialize() {
