@@ -16,8 +16,6 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-#include "include/plugins/where.hpp"
-
 namespace chainer_trt {
 
 using network_def = std::shared_ptr<nvinfer1::INetworkDefinition>;
@@ -79,26 +77,6 @@ namespace internal {
                                   nvinfer1::ElementWiseOperation::kPROD);
         return network->addElementWise(*p_x_minus_y->getOutput(0), *inputs[2],
                                        nvinfer1::ElementWiseOperation::kSUM);
-    }
-
-    nvinfer1::ILayer* build_where(network_def network,
-                                  const picojson::object& params,
-                                  nvinfer1::DataType dt,
-                                  const name_tensor_map& tensor_names) {
-        (void)dt;
-
-        auto source_elements = param_get<picojson::array>(params, "sources");
-        std::vector<nvinfer1::ITensor*> inputs;
-        for(picojson::value source_element : source_elements) {
-            const std::string& source = source_element.get<std::string>();
-            auto source_tensor = tensor_names.find(source);
-            if(source_tensor == tensor_names.end())
-                return NULL;
-            inputs.push_back(source_tensor->second);
-        }
-
-        auto p = new plugin::where(inputs[0]->getDimensions());
-        return network->addPlugin(inputs.data(), 3, *p);
     }
 
     nvinfer1::ILayer*
@@ -629,9 +607,6 @@ namespace internal {
             else if(type == "LinearInterpolate")
                 l = build_linear_interpolate(build_cxt.network, layer_params,
                                              dt, tensor_names);
-            else if(type == "Where")
-                l = build_where(build_cxt.network, layer_params, dt,
-                                tensor_names);
             else
                 throw layer_not_implemented(name, type);
 

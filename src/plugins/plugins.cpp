@@ -76,6 +76,8 @@ namespace plugin {
         add_builder_deserializer("GetItem", get_item::build_layer,
                                  get_item::deserialize);
         add_builder_deserializer("Sum", sum::build_layer, sum::deserialize);
+        add_builder_deserializer("Where", where::build_layer,
+                                 where::deserialize);
     }
 
     nvinfer1::ILayer* plugin_factory::build_plugin(
@@ -93,11 +95,6 @@ namespace plugin {
         std::string type = get_type(layerName);
         if(is_registered(type))
             return plugin_deserializers[type](buf, len);
-
-        // No worries about memory leak.
-        // TensorRT 5 releases plugin objects internally (different from 4)
-        else if(str_match(layerName, "Where"))
-            return new where(buf, len);
 
         throw layer_not_implemented(layerName, "Unknown");
     }

@@ -14,6 +14,10 @@ namespace plugin {
     public:
         where(nvinfer1::Dims dims);
         where(const void* buf, size_t size);
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
 
         int enqueue(int batchSize, const void* const* inputs, void** outputs,
                     void* workspace, cudaStream_t stream);
