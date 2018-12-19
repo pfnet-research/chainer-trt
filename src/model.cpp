@@ -16,14 +16,11 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-//#include "include/plugins/argmax.hpp"
-#include "include/plugins/broadcast_to.hpp"
 #include "include/plugins/constant_elementwise.hpp"
 #include "include/plugins/directed_pooling.hpp"
 #include "include/plugins/leaky_relu.hpp"
 #include "include/plugins/resize.hpp"
 #include "include/plugins/resize_argmax.hpp"
-//#include "include/plugins/shift.hpp"
 #include "include/plugins/slice.hpp"
 #include "include/plugins/sum.hpp"
 #include "include/plugins/where.hpp"
@@ -61,50 +58,6 @@ namespace internal {
           model_dir + "/" + input_tensor, nvinfer1::DataType::kFLOAT);
         return network->addConstant(shapes_to_dims(shape), w);
     }
-
-    nvinfer1::ILayer* build_broadcast_to(network_def network,
-                                         const picojson::object& params,
-                                         nvinfer1::DataType dt,
-                                         const name_tensor_map& tensor_names) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto input_shapes = param_get<picojson::array>(params, "in_shape");
-        auto output_shapes = param_get<picojson::array>(params, "out_shape");
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        // Create dimensions
-        nvinfer1::Dims in_dims, out_dims;
-        in_dims = shapes_to_dims(input_shapes);
-        out_dims = shapes_to_dims(output_shapes);
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::broadcast_to(in_dims, out_dims);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
-    /*
-    nvinfer1::ILayer* build_argmax(network_def network,
-                                   const picojson::object& params,
-                                   nvinfer1::DataType dt,
-                                   const name_tensor_map& tensor_names) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto shapes = param_get<picojson::array>(params, "shape");
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::argmax(shapes_to_dims(shapes));
-        auto res_layer = network->addPluginExt(&input, 1, *p);
-        return res_layer;
-    }*/
 
     nvinfer1::ILayer* build_resize_argmax(network_def network,
                                           const picojson::object& params,
@@ -914,12 +867,6 @@ namespace internal {
             else if(type == "ResizeImages")
                 l = build_resize(build_cxt.network, layer_params, dt,
                                  tensor_names);
-            else if(type == "BroadcastTo")
-                l = build_broadcast_to(build_cxt.network, layer_params, dt,
-                                       tensor_names);
-            //else if(type == "ArgMax")
-            //    l = build_argmax(build_cxt.network, layer_params, dt,
-            //                     tensor_names);
             else if(type == "ResizeArgmax")
                 l = build_resize_argmax(build_cxt.network, layer_params, dt,
                                         tensor_names);

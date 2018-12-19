@@ -47,6 +47,8 @@ namespace plugin {
                                  shift::deserialize);
         add_builder_deserializer("ArgMax", argmax::build_layer,
                                  argmax::deserialize);
+        add_builder_deserializer("BroadcastTo", broadcast_to::build_layer,
+                                 broadcast_to::deserialize);
     }
 
     nvinfer1::ILayer* plugin_factory::build_plugin(
@@ -83,8 +85,6 @@ namespace plugin {
             return new resize_argmax(buf, len);
         else if(str_match(layerName, "Resize"))
             return new resize(buf, len);
-        else if(str_match(layerName, "BroadcastTo"))
-            return new broadcast_to(buf, len);
         else if(str_match(layerName, "Sum"))
             return new sum(buf, len);
         else if(str_match(layerName, "Where"))

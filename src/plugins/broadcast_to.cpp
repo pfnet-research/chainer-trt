@@ -6,7 +6,10 @@
 
 #include <cuda_runtime.h>
 
-#include "chainer_trt/chainer_trt.hpp"
+#include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
+
+#include "include/chainer_trt_impl.hpp"
 #include "include/cuda/cuda_kernels.hpp"
 #include "include/plugins/broadcast_to.hpp"
 
@@ -24,6 +27,31 @@ namespace plugin {
         in_dims = p->in_dims;
         out_dims = p->out_dims;
         data_type = p->data_type;
+    }
+
+    nvinfer1::ILayer* broadcast_to::build_layer(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        (void)dt;
+        (void)model_dir;
+
+        auto source = param_get<std::string>(layer_params, "source");
+        auto in_shapes = param_get<picojson::array>(layer_params, "in_shape");
+        auto out_shapes = param_get<picojson::array>(layer_params, "out_shape");
+
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        // Create dimensions
+        nvinfer1::Dims in_dims, out_dims;
+        in_dims = internal::shapes_to_dims(in_shapes);
+        out_dims = internal::shapes_to_dims(out_shapes);
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p = new plugin::broadcast_to(in_dims, out_dims);
+        return network->addPluginExt(&input, 1, *p);
     }
 
     size_t broadcast_to::getSerializationSize() { return sizeof(broadcast_to); }
