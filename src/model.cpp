@@ -316,42 +316,6 @@ namespace internal {
                                  gamma, none);
     }
 
-    nvinfer1::ILayer*
-    build_directed_pooling(network_def network, const picojson::object& params,
-                           const name_tensor_map& tensor_names) {
-        const auto source = param_get<std::string>(params, "source");
-        const auto dir =
-          param_get<std::string>(params, "dir"); // left, right, top, bottom
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        int horizontal = 0;
-        int rev = 0;
-        if(dir == "left") {
-            horizontal = 1;
-            rev = 1;
-        } else if(dir == "right") {
-            horizontal = 1;
-            rev = 0;
-        } else if(dir == "top") {
-            horizontal = 0;
-            rev = 1;
-        } else if(dir == "bottom") {
-            horizontal = 0;
-            rev = 0;
-        } else {
-            throw std::runtime_error(
-              "Unknown dir parameter for directed_pooling.");
-        }
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p =
-          new plugin::directed_pooling(input->getDimensions(), horizontal, rev);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
     nvinfer1::ILayer* build_lrn(network_def network,
                                 const picojson::object& params,
                                 const name_tensor_map& tensor_names) {
@@ -738,9 +702,6 @@ namespace internal {
                     type == "BatchNormalization")
                 l = build_bn(build_cxt.network, layer_params, dt, tensor_names,
                              model_dir, build_cxt.weights);
-            else if(type == "DirectedPooling" or type == "CornerPooling")
-                l = build_directed_pooling(build_cxt.network, layer_params,
-                                           tensor_names);
             else if(type == "ReLU")
                 l = build_activation(build_cxt.network, layer_params,
                                      tensor_names,

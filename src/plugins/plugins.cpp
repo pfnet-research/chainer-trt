@@ -61,6 +61,12 @@ namespace plugin {
         add_builder_deserializer("DivFromConstant",
                                  constant_elementwise::build_layer,
                                  constant_elementwise::deserialize);
+        add_builder_deserializer("DirectedPooling",
+                                 directed_pooling::build_layer,
+                                 directed_pooling::deserialize);
+        add_builder_deserializer("CornerPooling",
+                                 directed_pooling::build_layer,
+                                 directed_pooling::deserialize);
     }
 
     nvinfer1::ILayer* plugin_factory::build_plugin(
@@ -85,9 +91,9 @@ namespace plugin {
             return new get_item(buf, len);
         else if(str_match(layerName, "LeakyReLU"))
             return new leaky_relu(buf, len);
-        else if(str_match(layerName, "DirectedPooling") or
-                str_match(layerName, "CornerPooling"))
-            return new directed_pooling(buf, len);
+        //else if(str_match(layerName, "DirectedPooling") or
+        //        str_match(layerName, "CornerPooling"))
+        //    return new directed_pooling(buf, len);
         else if(str_match(layerName, "ResizeArgmax"))
             return new resize_argmax(buf, len);
         else if(str_match(layerName, "Resize"))

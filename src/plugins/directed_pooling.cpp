@@ -7,6 +7,8 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
+#include <chainer_trt/external/picojson_helper.hpp>
+
 #include "include/cuda/cuda_kernels.hpp"
 #include "include/plugins/directed_pooling.hpp"
 
@@ -29,6 +31,47 @@ namespace plugin {
         W = p->W;
         horizontal = p->horizontal;
         rev = p->rev;
+    }
+
+    nvinfer1::ILayer* directed_pooling::build_layer(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        (void)dt;
+        (void)model_dir;
+
+        const auto source = param_get<std::string>(layer_params, "source");
+
+        // left, right, top, bottom
+        const auto dir = param_get<std::string>(layer_params, "dir");
+
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        int horizontal = 0;
+        int rev = 0;
+        if(dir == "left") {
+            horizontal = 1;
+            rev = 1;
+        } else if(dir == "right") {
+            horizontal = 1;
+            rev = 0;
+        } else if(dir == "top") {
+            horizontal = 0;
+            rev = 1;
+        } else if(dir == "bottom") {
+            horizontal = 0;
+            rev = 0;
+        } else {
+            throw std::runtime_error(
+              "Unknown dir parameter for directed_pooling.");
+        }
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p =
+          new plugin::directed_pooling(input->getDimensions(), horizontal, rev);
+        return network->addPluginExt(&input, 1, *p);
     }
 
     void directed_pooling::serialize(void *buffer) {

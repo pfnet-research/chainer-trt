@@ -16,6 +16,11 @@ namespace plugin {
         directed_pooling(nvinfer1::Dims in_dim, int horizontal_, int rev_);
         directed_pooling(const void* buf, size_t size);
 
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
+
         int enqueue(int batchSize, const void* const* inputs, void** outputs,
                     void* workspace, cudaStream_t stream);
 
