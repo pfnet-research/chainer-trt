@@ -69,6 +69,8 @@ namespace plugin {
                                  directed_pooling::deserialize);
         add_builder_deserializer("LeakyReLU", leaky_relu::build_layer,
                                  leaky_relu::deserialize);
+        add_builder_deserializer("ResizeImages", resize::build_layer,
+                                 resize::deserialize);
     }
 
     nvinfer1::ILayer* plugin_factory::build_plugin(
@@ -93,8 +95,6 @@ namespace plugin {
             return new get_item(buf, len);
         else if(str_match(layerName, "ResizeArgmax"))
             return new resize_argmax(buf, len);
-        else if(str_match(layerName, "Resize"))
-            return new resize(buf, len);
         else if(str_match(layerName, "Sum"))
             return new sum(buf, len);
         else if(str_match(layerName, "Where"))

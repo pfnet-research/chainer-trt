@@ -16,7 +16,6 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-#include "include/plugins/resize.hpp"
 #include "include/plugins/resize_argmax.hpp"
 #include "include/plugins/slice.hpp"
 #include "include/plugins/sum.hpp"
@@ -220,30 +219,6 @@ namespace internal {
         deconv->setStride(nvinfer1::DimsHW{stride_y, stride_x});
         deconv->setNbGroups(groups);
         return deconv;
-    }
-
-    nvinfer1::ILayer* build_resize(network_def network,
-                                   const picojson::object& params,
-                                   nvinfer1::DataType dt,
-                                   const name_tensor_map& tensor_names) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto input_hw = param_get<picojson::array>(params, "input_hw");
-        auto output_hw = param_get<picojson::array>(params, "output_hw");
-        auto n_channels = param_get<int>(params, "n_channels");
-        const int in_h = (int)input_hw[0].get<double>();
-        const int in_w = (int)input_hw[1].get<double>();
-        const int out_h = (int)output_hw[0].get<double>();
-        const int out_w = (int)output_hw[1].get<double>();
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::resize(n_channels, in_h, in_w, out_h, out_w);
-        return network->addPluginExt(&input, 1, *p);
     }
 
     nvinfer1::ILayer*
@@ -747,9 +722,6 @@ namespace internal {
             else if(type == "GetItem")
                 l =
                   build_getitem(build_cxt.network, layer_params, tensor_names);
-            else if(type == "ResizeImages")
-                l = build_resize(build_cxt.network, layer_params, dt,
-                                 tensor_names);
             else if(type == "ResizeArgmax")
                 l = build_resize_argmax(build_cxt.network, layer_params, dt,
                                         tensor_names);
