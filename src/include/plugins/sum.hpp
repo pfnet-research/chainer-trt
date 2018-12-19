@@ -16,6 +16,11 @@ namespace plugin {
         sum(nvinfer1::Dims _dims);
         sum(const void* buf, size_t size);
 
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
+
         size_t getSerializationSize() override;
         nvinfer1::Dims getOutputDimensions(int index,
                                            const nvinfer1::Dims* inputs,

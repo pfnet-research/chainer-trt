@@ -16,7 +16,6 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-#include "include/plugins/sum.hpp"
 #include "include/plugins/where.hpp"
 
 namespace chainer_trt {
@@ -484,24 +483,6 @@ namespace internal {
         return network->addUnary(*input, op);
     }
 
-    nvinfer1::ILayer* build_sum(network_def network,
-                                const picojson::object& params,
-                                nvinfer1::DataType dt,
-                                const name_tensor_map& tensor_names) {
-        (void)dt;
-
-        const auto source = param_get<std::string>(params, "source");
-        const auto shapes = param_get<picojson::array>(params, "shape");
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::sum(shapes_to_dims(shapes));
-        return network->addPluginExt(&input, 1, *p);
-    }
-
     build_context
     make_network(std::shared_ptr<nvinfer1::IBuilder> builder,
                  const std::string& model_dir, nvinfer1::DataType dt,
@@ -645,9 +626,6 @@ namespace internal {
                 l = build_concat(build_cxt.network, layer_params, tensor_names);
             else if(type == "Unary")
                 l = build_unary(build_cxt.network, layer_params, tensor_names);
-            else if(type == "Sum")
-                l =
-                  build_sum(build_cxt.network, layer_params, dt, tensor_names);
             else if(type == "LinearInterpolate")
                 l = build_linear_interpolate(build_cxt.network, layer_params,
                                              dt, tensor_names);
