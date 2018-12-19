@@ -22,11 +22,6 @@
 
 namespace chainer_trt {
 namespace plugin {
-
-    static bool str_match(const char* str, const char* kw) {
-        return std::string(str).find(kw) != std::string::npos;
-    }
-
     static std::string get_type(const char* layerName) {
         // Given "GetItem-0-1", p -> 7
         std::string name(layerName);

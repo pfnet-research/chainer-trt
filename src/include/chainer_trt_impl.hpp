@@ -53,12 +53,7 @@ namespace internal {
         nvinfer1::DimsHW
         compute(nvinfer1::DimsHW inputDims, nvinfer1::DimsHW kernelSize,
                 nvinfer1::DimsHW stride, nvinfer1::DimsHW padding,
-                nvinfer1::DimsHW dilation, const char* layerName)
-#if NV_TENSORRT_MAJOR >= 5
-          const override
-#else
-          override
-#endif
+                nvinfer1::DimsHW dilation, const char* layerName) const
         {
             (void)dilation;
 

@@ -43,6 +43,7 @@ namespace plugin {
       nvinfer1::DataType dt, const name_tensor_map& tensor_names,
       const std::string& model_dir) {
         (void)dt;
+        (void)model_dir;
 
         auto source = param_get<std::string>(layer_params, "source");
         auto input_hw = param_get<picojson::array>(layer_params, "input_hw");
