@@ -8,6 +8,7 @@
 #include <cuda_runtime.h>
 
 #include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
 
 #include "include/chainer_trt_impl.hpp"
 #include "include/cuda/cuda_kernels.hpp"
@@ -49,6 +50,47 @@ namespace plugin {
             values.push_back(p_vals[i]);
 
         n_in = internal::calc_n_elements(dims);
+    }
+
+    nvinfer1::ILayer* constant_elementwise::build_layer(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        (void)dt;
+
+        const auto type = param_get<std::string>(layer_params, "type");
+        const auto source = param_get<std::string>(layer_params, "source");
+        const auto constant_fn =
+          param_get<std::string>(layer_params, "constant_weights_file");
+
+        nvinfer1::ElementWiseOperation op;
+        if(type == "AddConstant")
+            op = nvinfer1::ElementWiseOperation::kSUM;
+        else if(type == "SubFromConstant")
+            op = nvinfer1::ElementWiseOperation::kSUB;
+        else if(type == "MulConstant")
+            op = nvinfer1::ElementWiseOperation::kPROD;
+        else if(type == "DivFromConstant")
+            op = nvinfer1::ElementWiseOperation::kDIV;
+        else
+            return nullptr;
+
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        // Load constant values
+        internal::weights_manager weights;
+        nvinfer1::Weights w = weights.load_weights_as(
+          model_dir + "/" + constant_fn, nvinfer1::DataType::kFLOAT);
+        std::vector<float> values;
+        for(int i = 0; i < w.count; ++i)
+            values.push_back(((float*)w.values)[i]);
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p =
+          new plugin::constant_elementwise(input->getDimensions(), op, values);
+        return network->addPlugin(&input, 1, *p);
     }
 
     int constant_elementwise::initialize() {

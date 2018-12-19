@@ -49,6 +49,18 @@ namespace plugin {
                                  argmax::deserialize);
         add_builder_deserializer("BroadcastTo", broadcast_to::build_layer,
                                  broadcast_to::deserialize);
+        add_builder_deserializer("AddConstant",
+                                 constant_elementwise::build_layer,
+                                 constant_elementwise::deserialize);
+        add_builder_deserializer("SubFromConstant",
+                                 constant_elementwise::build_layer,
+                                 constant_elementwise::deserialize);
+        add_builder_deserializer("MulConstant",
+                                 constant_elementwise::build_layer,
+                                 constant_elementwise::deserialize);
+        add_builder_deserializer("DivFromConstant",
+                                 constant_elementwise::build_layer,
+                                 constant_elementwise::deserialize);
     }
 
     nvinfer1::ILayer* plugin_factory::build_plugin(
@@ -71,11 +83,6 @@ namespace plugin {
         // TensorRT 5 releases plugin objects internally (different from 4)
         if(str_match(layerName, "GetItem"))
             return new get_item(buf, len);
-        else if(str_match(layerName, "AddConstant") ||
-                str_match(layerName, "SubFromConstant") ||
-                str_match(layerName, "MulConstant") ||
-                str_match(layerName, "DivFromConstant"))
-            return new constant_elementwise(buf, len);
         else if(str_match(layerName, "LeakyReLU"))
             return new leaky_relu(buf, len);
         else if(str_match(layerName, "DirectedPooling") or

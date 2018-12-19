@@ -23,6 +23,11 @@ namespace plugin {
 
         constant_elementwise(const void* buf, size_t size);
 
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
+
         void terminate() override;
 
         int initialize() override;

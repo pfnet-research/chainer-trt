@@ -16,7 +16,6 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-#include "include/plugins/constant_elementwise.hpp"
 #include "include/plugins/directed_pooling.hpp"
 #include "include/plugins/leaky_relu.hpp"
 #include "include/plugins/resize.hpp"
@@ -408,48 +407,6 @@ namespace internal {
         return network->addElementWise(*inputs[0], *inputs[1], op_type);
     }
 
-    nvinfer1::ILayer*
-    build_eltw_constant(network_def network, const picojson::object& params,
-                        const name_tensor_map& tensor_names,
-                        const std::string model_dir,
-                        nvinfer1::ElementWiseOperation op_type) {
-        (void)op_type;
-
-        const auto type = param_get<std::string>(params, "type");
-        const auto source = param_get<std::string>(params, "source");
-        const auto constant_fn =
-          param_get<std::string>(params, "constant_weights_file");
-
-        nvinfer1::ElementWiseOperation op;
-        if(type == "AddConstant")
-            op = nvinfer1::ElementWiseOperation::kSUM;
-        else if(type == "SubFromConstant")
-            op = nvinfer1::ElementWiseOperation::kSUB;
-        else if(type == "MulConstant")
-            op = nvinfer1::ElementWiseOperation::kPROD;
-        else if(type == "DivFromConstant")
-            op = nvinfer1::ElementWiseOperation::kDIV;
-        else
-            return nullptr;
-
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        // Load constant values
-        internal::weights_manager weights;
-        nvinfer1::Weights w = weights.load_weights_as(
-          model_dir + "/" + constant_fn, nvinfer1::DataType::kFLOAT);
-        std::vector<float> values;
-        for(int i = 0; i < w.count; ++i)
-            values.push_back(((float*)w.values)[i]);
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p =
-          new plugin::constant_elementwise(input->getDimensions(), op, values);
-        return network->addPlugin(&input, 1, *p);
-    }
-
     nvinfer1::ILayer* build_reshape(network_def network,
                                     const picojson::object& params,
                                     nvinfer1::DataType dt,
@@ -835,22 +792,6 @@ namespace internal {
             else if(type == "Minimum")
                 l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kMIN);
-            else if(type == "AddConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        tensor_names, model_dir,
-                                        nvinfer1::ElementWiseOperation::kSUM);
-            else if(type == "SubFromConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        tensor_names, model_dir,
-                                        nvinfer1::ElementWiseOperation::kSUB);
-            else if(type == "MulConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        tensor_names, model_dir,
-                                        nvinfer1::ElementWiseOperation::kPROD);
-            else if(type == "DivFromConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        tensor_names, model_dir,
-                                        nvinfer1::ElementWiseOperation::kDIV);
             else if(type == "Reshape")
                 l = build_reshape(build_cxt.network, layer_params, dt,
                                   tensor_names);
