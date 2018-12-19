@@ -67,6 +67,8 @@ namespace plugin {
         add_builder_deserializer("CornerPooling",
                                  directed_pooling::build_layer,
                                  directed_pooling::deserialize);
+        add_builder_deserializer("LeakyReLU", leaky_relu::build_layer,
+                                 leaky_relu::deserialize);
     }
 
     nvinfer1::ILayer* plugin_factory::build_plugin(
@@ -89,11 +91,6 @@ namespace plugin {
         // TensorRT 5 releases plugin objects internally (different from 4)
         if(str_match(layerName, "GetItem"))
             return new get_item(buf, len);
-        else if(str_match(layerName, "LeakyReLU"))
-            return new leaky_relu(buf, len);
-        //else if(str_match(layerName, "DirectedPooling") or
-        //        str_match(layerName, "CornerPooling"))
-        //    return new directed_pooling(buf, len);
         else if(str_match(layerName, "ResizeArgmax"))
             return new resize_argmax(buf, len);
         else if(str_match(layerName, "Resize"))

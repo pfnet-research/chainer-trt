@@ -16,8 +16,6 @@
 #include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
-#include "include/plugins/directed_pooling.hpp"
-#include "include/plugins/leaky_relu.hpp"
 #include "include/plugins/resize.hpp"
 #include "include/plugins/resize_argmax.hpp"
 #include "include/plugins/slice.hpp"
@@ -431,20 +429,6 @@ namespace internal {
         return network->addActivation(*input, activation_type);
     }
 
-    nvinfer1::ILayer* build_leaky_relu(network_def network,
-                                       const picojson::object& params,
-                                       const name_tensor_map& tensor_names) {
-        const auto source = param_get<std::string>(params, "source");
-        const float slope = param_get<double>(params, "slope");
-        auto source_tensor = tensor_names.find(source);
-        if(source_tensor == tensor_names.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::leaky_relu(input->getDimensions(), slope);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
     nvinfer1::ILayer*
     build_pooling(network_def network, const picojson::object& params,
                   const name_tensor_map& tensor_names, nvinfer1::PoolingType pt,
@@ -714,9 +698,6 @@ namespace internal {
                 l = build_activation(build_cxt.network, layer_params,
                                      tensor_names,
                                      nvinfer1::ActivationType::kTANH);
-            else if(type == "LeakyReLU")
-                l = build_leaky_relu(build_cxt.network, layer_params,
-                                     tensor_names);
             else if(type == "MaxPooling2D")
                 l = build_pooling(build_cxt.network, layer_params, tensor_names,
                                   nvinfer1::PoolingType::kMAX,

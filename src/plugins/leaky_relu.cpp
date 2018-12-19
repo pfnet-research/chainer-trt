@@ -7,6 +7,7 @@
 #include <cuda_runtime.h>
 
 #include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
 #include "include/cuda/cuda_kernels.hpp"
 #include "include/plugins/leaky_relu.hpp"
 
@@ -22,6 +23,24 @@ namespace plugin {
         input_dims = p->input_dims;
         data_type = p->data_type;
         slope = p->slope;
+    }
+
+    nvinfer1::ILayer* leaky_relu::build_layer(
+      network_def network, const picojson::object& layer_params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+      const std::string& model_dir) {
+        (void)dt;
+        (void)model_dir;
+
+        const auto source = param_get<std::string>(layer_params, "source");
+        const float slope = param_get<double>(layer_params, "slope");
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p = new plugin::leaky_relu(input->getDimensions(), slope);
+        return network->addPluginExt(&input, 1, *p);
     }
 
     size_t leaky_relu::getSerializationSize() { return sizeof(leaky_relu); }
