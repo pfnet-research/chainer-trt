@@ -7,8 +7,8 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/resize.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/resize.hpp"
 
 namespace chainer_trt {
 namespace plugin {

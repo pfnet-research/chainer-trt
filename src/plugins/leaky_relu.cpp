@@ -6,10 +6,9 @@
 
 #include <cuda_runtime.h>
 
-#include "chainer_trt/chainer_trt.hpp"
-
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/leaky_relu.hpp"
+#include <chainer_trt/chainer_trt.hpp>
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/leaky_relu.hpp"
 
 namespace chainer_trt {
 namespace plugin {

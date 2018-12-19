@@ -9,8 +9,8 @@
 
 #include <chainer_trt/external/picojson_helper.hpp>
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/shift.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/shift.hpp"
 
 namespace chainer_trt {
 namespace plugin {

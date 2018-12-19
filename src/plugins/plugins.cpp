@@ -4,21 +4,21 @@
 
 #include <memory>
 
-#include "chainer_trt/chainer_trt.hpp"
-#include "chainer_trt/external/picojson_helper.hpp"
-#include "chainer_trt/plugin.hpp"
+#include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
+#include <chainer_trt/plugin.hpp>
 
-#include "../include/plugins/argmax.hpp"
-#include "../include/plugins/broadcast_to.hpp"
-#include "../include/plugins/constant_elementwise.hpp"
-#include "../include/plugins/directed_pooling.hpp"
-#include "../include/plugins/leaky_relu.hpp"
-#include "../include/plugins/resize.hpp"
-#include "../include/plugins/resize_argmax.hpp"
-#include "../include/plugins/shift.hpp"
-#include "../include/plugins/slice.hpp"
-#include "../include/plugins/sum.hpp"
-#include "../include/plugins/where.hpp"
+#include "include/plugins/argmax.hpp"
+#include "include/plugins/broadcast_to.hpp"
+#include "include/plugins/constant_elementwise.hpp"
+#include "include/plugins/directed_pooling.hpp"
+#include "include/plugins/leaky_relu.hpp"
+#include "include/plugins/resize.hpp"
+#include "include/plugins/resize_argmax.hpp"
+#include "include/plugins/shift.hpp"
+#include "include/plugins/slice.hpp"
+#include "include/plugins/sum.hpp"
+#include "include/plugins/where.hpp"
 
 namespace chainer_trt {
 namespace plugin {

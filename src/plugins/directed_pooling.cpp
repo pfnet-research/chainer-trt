@@ -7,8 +7,8 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/directed_pooling.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/directed_pooling.hpp"
 
 namespace chainer_trt {
 namespace plugin {

@@ -8,10 +8,10 @@
 
 #include <chainer_trt/chainer_trt.hpp>
 #include <chainer_trt/external/picojson_helper.hpp>
-#include "../include/chainer_trt_impl.hpp"
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/argmax.hpp"
+#include "include/chainer_trt_impl.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/argmax.hpp"
 
 namespace chainer_trt {
 namespace plugin {

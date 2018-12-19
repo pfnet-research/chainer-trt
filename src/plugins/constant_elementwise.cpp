@@ -7,11 +7,11 @@
 
 #include <cuda_runtime.h>
 
-#include "chainer_trt/chainer_trt.hpp"
+#include <chainer_trt/chainer_trt.hpp>
 
-#include "../include/chainer_trt_impl.hpp"
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/constant_elementwise.hpp"
+#include "include/chainer_trt_impl.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/constant_elementwise.hpp"
 
 namespace chainer_trt {
 namespace plugin {

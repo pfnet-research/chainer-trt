@@ -7,10 +7,10 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-#include "chainer_trt/chainer_trt.hpp"
+#include <chainer_trt/chainer_trt.hpp>
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/slice.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/slice.hpp"
 
 namespace chainer_trt {
 namespace plugin {

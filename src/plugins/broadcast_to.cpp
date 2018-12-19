@@ -3,14 +3,12 @@
  */
 
 #include <cassert>
-#include <iostream>
 
 #include <cuda_runtime.h>
 
 #include "chainer_trt/chainer_trt.hpp"
-
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/broadcast_to.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/broadcast_to.hpp"
 
 namespace chainer_trt {
 namespace plugin {

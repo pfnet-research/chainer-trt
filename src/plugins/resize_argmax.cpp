@@ -7,8 +7,8 @@
 
 #include <cuda_runtime.h>
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/resize_argmax.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/resize_argmax.hpp"
 
 namespace chainer_trt {
 namespace plugin {
