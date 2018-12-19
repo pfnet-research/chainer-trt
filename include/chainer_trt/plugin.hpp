@@ -25,7 +25,7 @@ namespace plugin {
     using builder_func = std::function<nvinfer1::ILayer*(
       network_def, const picojson::object&, nvinfer1::DataType,
       const name_tensor_map&, const std::string&)>;
-    using deserializer_func = std::function<nvinfer1::IPluginExt*(void*, int)>;
+    using deserializer_func = std::function<nvinfer1::IPluginExt*(const void*, int)>;
 
     class plugin_factory : public nvinfer1::IPluginFactory {
 

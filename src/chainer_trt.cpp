@@ -64,6 +64,20 @@ float param_get<float>(const picojson::object& params, const std::string& key) {
 }
 
 namespace internal {
+    nvinfer1::Dims shapes_to_dims(const picojson::array& shapes) {
+        assert(shapes.size() <= nvinfer1::Dims::MAX_DIMS); // <=8
+
+        nvinfer1::Dims dims;
+        dims.nbDims = shapes.size();
+
+        for(size_t j = 0; j < shapes.size(); j++) {
+            dims.d[j] = shapes[j].get<double>();
+            dims.type[j] = nvinfer1::DimensionType::kSPATIAL;
+        }
+        dims.type[0] = nvinfer1::DimensionType::kCHANNEL;
+        return dims;
+    }
+    
     std::vector<std::string> split(const std::string& str, char sep) {
         std::vector<std::string> result;
         std::stringstream ss(str);

@@ -15,10 +15,10 @@
 #include <NvInfer.h>
 #pragma GCC diagnostic pop
 
-#include "plugins/plugins.hpp"
-
 namespace chainer_trt {
 namespace internal {
+    nvinfer1::Dims shapes_to_dims(const picojson::array& shapes);
+
     class weights_manager {
         std::vector<nvinfer1::Weights> weights;
 

@@ -8,8 +8,8 @@
 #include <stdexcept>
 
 #include "chainer_trt/chainer_trt.hpp"
-#include "include/chainer_trt_impl.hpp"
 #include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/slice.hpp"
 #include "test_helper.hpp"
 
 using chainer_trt::internal::make_dims;
