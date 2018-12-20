@@ -103,7 +103,7 @@ namespace plugin {
             if(type != nvinfer1::DataType::kFLOAT &&
                type != nvinfer1::DataType::kHALF)
                 throw std::runtime_error(
-                  "Invalid DataType is specified to argmax_plugin::enqueue");
+                  "Invalid DataType is specified to enqueue");
         }
 
         int getNbOutputs() const override { return 1; }
@@ -113,40 +113,6 @@ namespace plugin {
         void terminate() override {}
 
         size_t getWorkspaceSize(int) const override { return 0; }
-
-        // Children has to override them instead of getPluginType and
-        // getPluginVersion for better support for both TensorRT4 and 5
-        virtual const char* get_plugin_type() const = 0;
-        virtual const char* get_plugin_version() const = 0;
-
-#if IS_TRT5RC
-        const char* getPluginType() const override { return get_plugin_type(); }
-
-        const char* getPluginVersion() const override {
-            return get_plugin_version();
-        }
-
-        void destroy() override { delete this; }
-
-        IPluginExt* clone() const override {
-            // Clone object through serialization
-            const size_t s = ((T*)this)->getSerializationSize();
-            if(s == 0) {
-                std::ostringstream ost;
-                ost << "Error: serialization size of " << typeid(T).name();
-                ost << " reported by getSerializationSize() is 0.";
-                ost << " Something is wrong.";
-                throw std::runtime_error(ost.str());
-            }
-
-            std::vector<unsigned char> buf(s, 0);
-            // serialize
-            ((T*)this)->serialize((void*)buf.data());
-
-            // create new instance from the serialization
-            return new T(buf.data(), s);
-        }
-#endif
     };
 }
 }

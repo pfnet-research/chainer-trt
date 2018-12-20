@@ -72,12 +72,6 @@ public:
         // Save (minimum) information needed to describe the operation
         (void)buffer;
     }
-
-    const char* get_plugin_type() const override {
-        return "my_increment_plugin";
-    }
-
-    const char* get_plugin_version() const override { return "1.0.0"; }
 };
 
 // Network builder function called from chainer-trt

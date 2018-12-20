@@ -35,12 +35,6 @@ namespace plugin {
                                            const nvinfer1::Dims* inputs,
                                            int nbInputDims) override;
         void serialize(void* buf);
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_resize";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }

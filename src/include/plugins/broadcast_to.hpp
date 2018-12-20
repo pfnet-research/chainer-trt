@@ -44,12 +44,6 @@ namespace plugin {
 
         nvinfer1::Dims get_in_dims() const { return in_dims; };
         nvinfer1::Dims get_out_dims() const { return out_dims; };
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_broadcast_to";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }

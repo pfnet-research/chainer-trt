@@ -92,12 +92,6 @@ namespace plugin {
         nvinfer1::Dims getOutputDimensions(int index,
                                            const nvinfer1::Dims* inputs,
                                            int nbInputDims) override;
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_get_item";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }

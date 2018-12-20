@@ -40,12 +40,6 @@ namespace plugin {
                                  int nbOutputs, nvinfer1::DataType type,
                                  nvinfer1::PluginFormat format,
                                  int maxBatchSize) override;
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_where";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }

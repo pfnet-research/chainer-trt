@@ -49,12 +49,6 @@ namespace plugin {
             return dims;
         }
 
-        const char* get_plugin_type() const override {
-            return "chainer_trt_constant_elementwise";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
-
         // helpers for test
         nvinfer1::ElementWiseOperation get_op() const { return op; }
         std::vector<float> get_values() const { return values; }

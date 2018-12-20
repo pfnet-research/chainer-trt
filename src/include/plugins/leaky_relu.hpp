@@ -29,12 +29,6 @@ namespace plugin {
                     void* workspace, cudaStream_t stream) override;
 
         void serialize(void* buffer) override;
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_leaky_relu";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }
