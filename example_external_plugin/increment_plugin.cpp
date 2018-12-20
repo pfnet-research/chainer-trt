@@ -77,11 +77,11 @@ public:
 // Network builder function called from chainer-trt
 // Can also be a static member of increment_plugin
 // (like chainer-trt default plugins)
-nvinfer1::ILayer* build_increment(network_def network,
-                                  const picojson::object& layer_params,
-                                  nvinfer1::DataType dt,
-                                  const name_tensor_map& tensor_names,
-                                  const std::string& model_dir) {
+nvinfer1::ILayer* build_layer(network_def network,
+                              const picojson::object& layer_params,
+                              nvinfer1::DataType dt,
+                              const name_tensor_map& tensor_names,
+                              const std::string& model_dir) {
     (void)dt;
     (void)model_dir;
 
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
         return -1;
 
     auto factory = std::make_shared<chainer_trt::plugin::plugin_factory>();
-    factory->add_builder_deserializer("Increment", build_increment,
+    factory->add_builder_deserializer("Increment", build_layer,
                                       increment_plugin::deserialize);
     const double workspace_gb = 1.0;
     const int max_batch = 1;
