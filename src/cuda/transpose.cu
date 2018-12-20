@@ -4,16 +4,16 @@
 
 namespace chainer_trt {
 namespace plugin {
-    __global__ void transpose_kernel(const float *d_src, float *d_dst,
-                                     int *d_indexes, int in_size) {
+    __global__ void transpose_kernel(const float* d_src, float* d_dst,
+                                     int* d_indexes, int in_size) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if(idx < in_size)
             d_dst[blockIdx.y * in_size + d_indexes[idx]] =
               d_src[blockIdx.y * in_size + idx];
     }
 
-    __global__ void transpose_indexes(int *d_dst, int *i_strides, int *shuffle,
-                                      int *i_d, int *o_strides, int id_size,
+    __global__ void transpose_indexes(int* d_dst, int* i_strides, int* shuffle,
+                                      int* i_d, int* o_strides, int id_size,
                                       int in_size) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x; // _h
 
@@ -27,7 +27,7 @@ namespace plugin {
         }
     }
 
-    void apply_transpose(const float *d_src, float *d_dst, int *d_indexes,
+    void apply_transpose(const float* d_src, float* d_dst, int* d_indexes,
                          int in_size, int batch_size, cudaStream_t stream) {
         const int thread_size = 1024;
         const int block_size = (int)std::ceil(1.0 * in_size / thread_size);
@@ -36,8 +36,8 @@ namespace plugin {
                                                            d_indexes, in_size);
     }
 
-    void initialize_transpose_indexes(int *d_dst, int *i_strides, int *shuffle,
-                                      int *i_d, int *o_strides, int in_size,
+    void initialize_transpose_indexes(int* d_dst, int* i_strides, int* shuffle,
+                                      int* i_d, int* o_strides, int in_size,
                                       int id_size) {
         const int thread_size = 1024;
         const int block_size = (int)std::ceil(1.0 * in_size / thread_size);

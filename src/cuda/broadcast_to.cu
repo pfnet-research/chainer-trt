@@ -7,8 +7,8 @@
 namespace chainer_trt {
 namespace plugin {
     template <typename T>
-    __global__ void broadcast_to_kernel(const T *d_src, T *d_dst,
-                                        int *d_i_strides, int *d_o_strides,
+    __global__ void broadcast_to_kernel(const T* d_src, T* d_dst,
+                                        int* d_i_strides, int* d_o_strides,
                                         int in_size, int out_size,
                                         int nb_dims) {
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -26,8 +26,8 @@ namespace plugin {
     }
 
     template <typename T>
-    void apply_broadcast_to(const T *d_src, T *d_dst, int *d_i_strides,
-                            int *d_o_strides, int in_size, int out_size,
+    void apply_broadcast_to(const T* d_src, T* d_dst, int* d_i_strides,
+                            int* d_o_strides, int in_size, int out_size,
                             int nb_dims, int batch_size, cudaStream_t stream) {
         const int thread_size = 1024;
         const int block_size = (int)std::ceil(1.0 * out_size / thread_size);
@@ -36,9 +36,9 @@ namespace plugin {
           d_src, d_dst, d_i_strides, d_o_strides, in_size, out_size, nb_dims);
     }
 
-    template void apply_broadcast_to(const float *, float *, int *, int *, int,
+    template void apply_broadcast_to(const float*, float*, int*, int*, int, int,
+                                     int, int, cudaStream_t);
+    template void apply_broadcast_to(const __half*, __half*, int*, int*, int,
                                      int, int, int, cudaStream_t);
-    template void apply_broadcast_to(const __half *, __half *, int *, int *,
-                                     int, int, int, int, cudaStream_t);
 }
 }

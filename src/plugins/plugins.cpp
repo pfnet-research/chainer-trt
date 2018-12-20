@@ -59,8 +59,7 @@ namespace plugin {
         add_builder_deserializer("DirectedPooling",
                                  directed_pooling::build_layer,
                                  directed_pooling::deserialize);
-        add_builder_deserializer("CornerPooling",
-                                 directed_pooling::build_layer,
+        add_builder_deserializer("CornerPooling", directed_pooling::build_layer,
                                  directed_pooling::deserialize);
         add_builder_deserializer("LeakyReLU", leaky_relu::build_layer,
                                  leaky_relu::deserialize);

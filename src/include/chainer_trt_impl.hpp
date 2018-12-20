@@ -53,8 +53,7 @@ namespace internal {
         nvinfer1::DimsHW
         compute(nvinfer1::DimsHW inputDims, nvinfer1::DimsHW kernelSize,
                 nvinfer1::DimsHW stride, nvinfer1::DimsHW padding,
-                nvinfer1::DimsHW dilation, const char* layerName) const
-        {
+                nvinfer1::DimsHW dilation, const char* layerName) const {
             (void)dilation;
 
             auto cover_all = cover_all_flags.find(layerName);

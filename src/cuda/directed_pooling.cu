@@ -24,8 +24,8 @@ namespace plugin {
     __global__ void horizontal_directed_pooling(const int B, const int C,
                                                 const int H, const int W,
                                                 const bool rev,
-                                                const T *__restrict__ src,
-                                                T *__restrict__ dst) {
+                                                const T* __restrict__ src,
+                                                T* __restrict__ dst) {
         // int target = threadIdx.x;  // w_index
         const int h_idx = blockIdx.z;
         const int c_idx = blockIdx.y;
@@ -63,7 +63,7 @@ namespace plugin {
     __global__ void
     vertical_directed_pooling(const int B, const int C, const int H,
                               const int W, const bool rev,
-                              const T *__restrict__ src, T *__restrict__ dst) {
+                              const T* __restrict__ src, T* __restrict__ dst) {
         int target = blockIdx.y * blockDim.y + threadIdx.y;
         const int w_idx = target % W;
         const int c_idx = target / W;
@@ -93,8 +93,8 @@ namespace plugin {
     }
 
     template <typename T>
-    void apply_directed_pooling(const T *src_gpu, int B, int C, int H, int W,
-                                bool horizontal, bool rev, T *dst_gpu,
+    void apply_directed_pooling(const T* src_gpu, int B, int C, int H, int W,
+                                bool horizontal, bool rev, T* dst_gpu,
                                 cudaStream_t stream) {
         if(horizontal) {
             dim3 block(W);
@@ -109,13 +109,13 @@ namespace plugin {
         }
     }
 
-    template void apply_directed_pooling(const float *src_gpu, int B, int C,
+    template void apply_directed_pooling(const float* src_gpu, int B, int C,
                                          int H, int W, bool horizontal,
-                                         bool rev, float *dst_gpu,
+                                         bool rev, float* dst_gpu,
                                          cudaStream_t stream);
-    template void apply_directed_pooling(const __half *src_gpu, int B, int C,
+    template void apply_directed_pooling(const __half* src_gpu, int B, int C,
                                          int H, int W, bool horizontal,
-                                         bool rev, __half *dst_gpu,
+                                         bool rev, __half* dst_gpu,
                                          cudaStream_t stream);
 }
 }

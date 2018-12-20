@@ -77,7 +77,7 @@ namespace internal {
         dims.type[0] = nvinfer1::DimensionType::kCHANNEL;
         return dims;
     }
-    
+
     std::vector<std::string> split(const std::string& str, char sep) {
         std::vector<std::string> result;
         std::stringstream ss(str);

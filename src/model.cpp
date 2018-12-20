@@ -681,30 +681,27 @@ void model::set_n_inputs_and_outputs() {
 }
 
 std::shared_ptr<model> model::build(const build_param_fp32& param) {
-    auto builder = internal::make_builder(param.workspace_gb,
-                                          param.max_batch_size);
-    auto nw = internal::make_network(builder, param.model_dir,
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
+    auto nw = internal::make_network(b, param.model_dir,
                                      nvinfer1::DataType::kFLOAT, param.factory);
     return nw.build();
 }
 
 std::shared_ptr<model> model::build(const build_param_fp16& param) {
-    auto builder = internal::make_builder(param.workspace_gb,
-                                          param.max_batch_size);
-    builder->setHalf2Mode(true);
-    auto nw = internal::make_network(builder, param.model_dir,
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
+    b->setHalf2Mode(true);
+    auto nw = internal::make_network(b, param.model_dir,
                                      nvinfer1::DataType::kHALF, param.factory);
     return nw.build();
 }
 
 std::shared_ptr<model> model::build(const build_param_int8& param) {
-    auto builder = internal::make_builder(param.workspace_gb,
-                                          param.max_batch_size);
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
     std::cout << "Int8 calibration enabled" << std::endl;
-    builder->setInt8Mode(true);
+    b->setInt8Mode(true);
 
     auto build_cxt = internal::make_network(
-      builder, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
+      b, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
 
     std::vector<nvinfer1::Dims> dims;
     for(int i = 0; i < build_cxt.network->getNbInputs(); ++i)
@@ -712,25 +709,24 @@ std::shared_ptr<model> model::build(const build_param_int8& param) {
 
     auto calibrator = std::make_unique<internal::int8_entropy_calibrator>(
       dims, param.calib_stream, param.out_cache_file);
-    builder->setInt8Calibrator(calibrator.get());
+    b->setInt8Calibrator(calibrator.get());
 
     return build_cxt.build();
 }
 
 std::shared_ptr<model> model::build(const build_param_int8_cached& param) {
-    auto builder = internal::make_builder(param.workspace_gb,
-                                          param.max_batch_size);
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
     std::cout << "Int8 calibration enabled (from cache \"";
     std::cout << param.in_cache_file << "\")" << std::endl;
-    builder->setInt8Mode(true);
+    b->setInt8Mode(true);
 
     auto build_cxt = internal::make_network(
-      builder, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
+      b, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
 
     auto calibrator =
       std::make_unique<internal::int8_entropy_calibrator_cached>(
         param.in_cache_file);
-    builder->setInt8Calibrator(calibrator.get());
+    b->setInt8Calibrator(calibrator.get());
 
     return build_cxt.build();
 }

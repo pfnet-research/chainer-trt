@@ -79,7 +79,7 @@ namespace plugin {
         const unsigned int group_size = c / n_groups;
         const unsigned int stride = blockDim.x * gridDim.x;
 
-        #pragma unroll
+#pragma unroll
         for(unsigned int i = blockIdx.x * blockDim.x + threadIdx.x; i < chw;
             i += stride) {
             // Based on

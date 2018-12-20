@@ -18,9 +18,9 @@ namespace plugin {
 
     sum::sum(nvinfer1::Dims _dims) : input_dims(_dims) {}
 
-    sum::sum(const void *buf, size_t size) {
+    sum::sum(const void* buf, size_t size) {
         (void)size;
-        auto p = static_cast<const sum *>(buf);
+        auto p = static_cast<const sum*>(buf);
         input_dims = p->input_dims;
         data_type = p->data_type;
     }
@@ -48,7 +48,7 @@ namespace plugin {
     size_t sum::getSerializationSize() { return sizeof(sum); }
 
     nvinfer1::Dims sum::getOutputDimensions(int index,
-                                            const nvinfer1::Dims *inputs,
+                                            const nvinfer1::Dims* inputs,
                                             int nbInputDims) {
         (void)index;
         (void)inputs;
@@ -64,25 +64,25 @@ namespace plugin {
         return output_dims;
     }
 
-    void sum::serialize(void *buffer) {
-        auto p = static_cast<sum *>(buffer);
+    void sum::serialize(void* buffer) {
+        auto p = static_cast<sum*>(buffer);
         p->input_dims = input_dims;
         p->data_type = data_type;
     }
 
-    int sum::enqueue(int batchSize, const void *const *inputs, void **outputs,
-                     void *workspace, cudaStream_t stream) {
+    int sum::enqueue(int batchSize, const void* const* inputs, void** outputs,
+                     void* workspace, cudaStream_t stream) {
         (void)workspace;
 
         const int n_total = internal::calc_n_elements(input_dims);
         switch(data_type) {
             case nvinfer1::DataType::kFLOAT:
-                apply_sum((const float *)inputs[0], (float *)outputs[0],
+                apply_sum((const float*)inputs[0], (float*)outputs[0],
                           input_dims.d[0], n_total / input_dims.d[0], n_total,
                           batchSize, stream);
                 break;
             case nvinfer1::DataType::kHALF:
-                apply_sum((const __half *)inputs[0], (__half *)outputs[0],
+                apply_sum((const __half*)inputs[0], (__half*)outputs[0],
                           input_dims.d[0], n_total / input_dims.d[0], n_total,
                           batchSize, stream);
                 break;

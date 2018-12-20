@@ -6,10 +6,10 @@
 
 #include <cuda_runtime.h>
 
-#include <chainer_trt/chainer_trt.hpp>
-#include <chainer_trt/external/picojson_helper.hpp>
 #include "include/cuda/cuda_kernels.hpp"
 #include "include/plugins/where.hpp"
+#include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
 
 namespace chainer_trt {
 namespace plugin {
@@ -32,8 +32,8 @@ namespace plugin {
         (void)dt;
         (void)model_dir;
 
-        auto source_elements
-          = param_get<picojson::array>(layer_params, "sources");
+        auto source_elements =
+          param_get<picojson::array>(layer_params, "sources");
         std::vector<nvinfer1::ITensor*> inputs;
         for(picojson::value source_element : source_elements) {
             const std::string& source = source_element.get<std::string>();

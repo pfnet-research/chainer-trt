@@ -90,9 +90,10 @@ namespace plugin {
         if(source_tensor == tensor_names.end())
             return NULL;
 
-        auto err_msg = "Each of GetItem parameter has to be "
-                       "3-element list, or a single integer."
-                       "Fix ModelRetriever";
+        auto err_msg =
+          "Each of GetItem parameter has to be "
+          "3-element list, or a single integer."
+          "Fix ModelRetriever";
 
         // Parse array of array to list of shape
         auto json_slices = param_get<picojson::array>(layer_params, "slices");
