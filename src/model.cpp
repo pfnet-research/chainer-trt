@@ -753,9 +753,8 @@ model::build_int8(const std::string& model_dir,
                   double workspace_gb, int max_batch_size,
                   const std::string& out_cache_file,
                   std::shared_ptr<plugin::plugin_factory> factory) {
-    build_param_int8 p(model_dir, workspace_gb, max_batch_size, factory);
-    p.calib_stream = calib_stream;
-    p.out_cache_file = out_cache_file;
+    build_param_int8 p(model_dir, calib_stream, workspace_gb, max_batch_size,
+                       out_cache_file, factory);
     return build(p);
 }
 
@@ -764,10 +763,10 @@ model::build_int8_cache(const std::string& model_dir,
                         const std::string& in_cache_file, double workspace_gb,
                         int max_batch_size,
                         std::shared_ptr<plugin::plugin_factory> factory) {
-    build_param_int8_cached p(model_dir, workspace_gb, max_batch_size, factory);
-    p.in_cache_file = in_cache_file;
     if(!in_cache_file.size())
         std::invalid_argument("in_cache_file shouldn't be empty");
+    build_param_int8_cached p(model_dir, in_cache_file, workspace_gb,
+                              max_batch_size, factory);
     return build(p);
 }
 
