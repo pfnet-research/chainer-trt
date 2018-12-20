@@ -115,6 +115,48 @@ public:
     static void set_logger(std::shared_ptr<nvinfer1::ILogger> p);
 };
 
+struct build_param {
+    std::string model_dir;
+    double workspace_gb;
+    int max_batch_size;
+    std::shared_ptr<plugin::plugin_factory> factory;
+
+    build_param(const std::string& _model_dir, double ws = 6.0, int b = 1,
+                std::shared_ptr<plugin::plugin_factory> _f
+                  = std::make_shared<plugin::plugin_factory>())
+      : model_dir(_model_dir), workspace_gb(ws), max_batch_size(b),
+        factory(_f) { }
+};
+
+struct build_param_fp32 : build_param {
+    using build_param::build_param;     // ctor
+};
+
+struct build_param_fp16 : build_param {
+    using build_param::build_param;     // ctor
+};
+
+struct build_param_int8_cached : build_param {
+    using build_param::build_param;     // ctor
+
+    std::string in_cache_file;
+
+    build_param_int8_cached(const std::string& _m,
+                            const std::string& _in_cache)
+     : build_param(_m), in_cache_file(_in_cache) { }
+};
+
+struct build_param_int8 : build_param {
+    using build_param::build_param;     // ctor
+
+    std::shared_ptr<calibration_stream> calib_stream;
+    std::string out_cache_file;
+
+    build_param_int8(const std::string& _model_dir,
+                     const std::string& _out_cache_file = "")
+      : build_param(_model_dir), out_cache_file(_out_cache_file) { }
+};
+
 class infer;
 class buffer;
 
@@ -135,6 +177,11 @@ class model {
     void set_n_inputs_and_outputs();
 
 public:
+    static std::shared_ptr<model> build(const build_param_fp32& param);
+    static std::shared_ptr<model> build(const build_param_fp16& param);
+    static std::shared_ptr<model> build(const build_param_int8& param);
+    static std::shared_ptr<model> build(const build_param_int8_cached& param);
+
     static std::shared_ptr<model>
     build_fp32(const std::string& model_dir, double workspace_gb = 6.0,
                int max_batch_size = 1,
