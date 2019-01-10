@@ -18,23 +18,27 @@
 
 using TestParams =
   std::tuple<int, std::string, std::vector<std::string>, std::string,
-             nvinfer1::Dims, nvinfer1::DataType, float>;
+             nvinfer1::Dims, nvinfer1::DataType, float, std::string>;
 
 // tuple params:
 // batch_size, model_path, input_file_list, expected_output_file,
 // expected_output_dims, model_data_type, allowed_abs_error
 class TensorRTBuilderTestFixture : public ::testing::TestWithParam<TestParams> {
 public:
-    std::shared_ptr<chainer_trt::model> make_model(const std::string& model_dir,
-                                                   nvinfer1::DataType dt,
-                                                   int batch_size) const {
+    std::shared_ptr<chainer_trt::model>
+    make_model(const std::string& model_dir, nvinfer1::DataType dt,
+               const std::string& int8_calib_cache, int batch_size) const {
         if(dt == nvinfer1::DataType::kFLOAT)
             return chainer_trt::model::build_fp32(model_dir, 2, batch_size);
         else if(dt == nvinfer1::DataType::kHALF)
             return chainer_trt::model::build_fp16(model_dir, 2, batch_size);
-        else if(dt == nvinfer1::DataType::kINT8)
+        else if(dt == nvinfer1::DataType::kINT8 && !int8_calib_cache.size())
+            // If no calib cache is specified, use 1000 random data.
             return chainer_trt::model::build_int8(
               model_dir, std::make_shared<BS>(1000), 2, batch_size);
+        else if(dt == nvinfer1::DataType::kINT8 && int8_calib_cache.size())
+            return chainer_trt::model::build_int8_cache(
+              model_dir, int8_calib_cache, 2, batch_size);
         return std::shared_ptr<chainer_trt::model>();
     }
 
@@ -60,8 +64,10 @@ TEST_P(TensorRTBuilderTestFixture, TestWithSerialize) {
     const nvinfer1::Dims expected_output_dims = std::get<4>(param);
     const nvinfer1::DataType model_mode = std::get<5>(param);
     const float allowed_relative_error = std::get<6>(param);
+    const std::string int8_calib_cache = std::get<7>(param);
 
-    const auto model_src = make_model(export_path, model_mode, batch_size);
+    const auto model_src =
+      make_model(export_path, model_mode, int8_calib_cache, batch_size);
 
     // Serialize
     std::ostringstream oss;
@@ -154,8 +160,11 @@ std::vector<TestParams> load_params(const std::string& fixture_json_file) {
               "Only \"kFLOAT\", \"kHALF\" and \"kINT8\""
               " are supported for now");
 
+        auto int8_calib_cache =
+          f.find("int8_calib_cache")->second.get<std::string>();
+
         ret.push_back(TestParams((int)batch_size, name, inputs, expected_output,
-                                 out_dim, dtype, error));
+                                 out_dim, dtype, error, int8_calib_cache));
     }
 
     return ret;
