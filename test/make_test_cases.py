@@ -418,7 +418,7 @@ def regression_imagenets():
     for arch in [L.VGG16Layers, L.ResNet50Layers]:
         c = "{}/{}_int8_calib_cache.dat".format(base_path, arch.__name__)
 
-        @generator(errs=(0.001, 0.01, 0.05),
+        @generator(errs=(0.0001, 0.005, 0.03),
                    batch_sizes=(1, 8), int8_calib_cache=c,
                    name_suffix='_{}'.format(arch.__name__))
         def regression_imagenet():
