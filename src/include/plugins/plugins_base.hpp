@@ -15,9 +15,8 @@
 #include <NvInfer.h>
 #pragma GCC diagnostic pop
 
-#define IS_TRT5RC                                        \
-    (NV_TENSORRT_MAJOR == 5 && NV_TENSORRT_MINOR == 0 && \
-     NV_TENSORRT_PATCH == 0 && NV_TENSORRT_BUILD <= 10)
+#define IS_TRT5RC (NV_TENSORRT_MAJOR == 5 &&           \
+    (NV_TENSORRT_MINOR == 0 && NV_TENSORRT_PATCH < 2)) \
 
 namespace chainer_trt {
 namespace plugin {
