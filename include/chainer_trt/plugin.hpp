@@ -18,6 +18,10 @@
 #include <NvInfer.h>
 #pragma GCC diagnostic pop
 
+#define IS_TRT5RC              \
+    (NV_TENSORRT_MAJOR == 5 && \
+     (NV_TENSORRT_MINOR == 0 && NV_TENSORRT_PATCH < 2))
+
 namespace chainer_trt {
 namespace plugin {
     using network_def = std::shared_ptr<nvinfer1::INetworkDefinition>;
@@ -113,6 +117,38 @@ namespace plugin {
         void terminate() override {}
 
         size_t getWorkspaceSize(int) const override { return 0; }
+
+#if IS_TRT5RC
+        // workardounds
+        // TensorRT on DrivePX is not yet GA,
+        // which requires the following interfaces to be implemented
+
+        const char* getPluginType() const override { return typeid(T).name(); }
+
+        const char* getPluginVersion() const override { return "1.0.0"; }
+
+        void destroy() override { delete this; }
+
+        IPluginExt* clone() const override {
+            // Clone object through serialization
+            const size_t s = ((T*)this)->getSerializationSize();
+            if(s == 0) {
+                std::ostringstream ost;
+                ost << "Error: serialization size of " << typeid(T).name();
+                ost << " reported by getSerializationSize() is 0.";
+                ost << " Something is wrong.";
+                throw std::runtime_error(ost.str());
+            }
+
+            std::vector<unsigned char> buf(s, 0);
+
+            // serialize
+            ((T*)this)->serialize((void*)buf.data());
+
+            // create new instance from the serialization
+            return new T(buf.data(), s);
+        }
+#endif
     };
 }
 }
