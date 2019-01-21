@@ -415,7 +415,7 @@ def regression_imagenets():
     mean = np.array([103.939, 116.779, 123.68], dtype=np.float32)
     mean = np.broadcast_to(mean.reshape((1, 3, 1, 1)), (1, 3, 224, 224))
 
-    for arch in [L.VGG16Layers, L.ResNet50Layers]:
+    for arch in [L.GoogLeNet, L.VGG16Layers, L.ResNet50Layers]:
         c = "{}/{}_int8_calib_cache.dat".format(base_path, arch.__name__)
 
         @generator(errs=(0.0001, 0.005, 0.03),
