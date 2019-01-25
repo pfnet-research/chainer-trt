@@ -6,10 +6,10 @@
 
 #include <cuda_runtime.h>
 
-#include "chainer_trt/chainer_trt.hpp"
-
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/where.hpp"
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/where.hpp"
+#include <chainer_trt/chainer_trt.hpp>
+#include <chainer_trt/external/picojson_helper.hpp>
 
 namespace chainer_trt {
 namespace plugin {
@@ -22,6 +22,29 @@ namespace plugin {
         auto p = static_cast<const where*>(buf);
         input_dims = p->input_dims;
         data_type = p->data_type;
+    }
+
+    nvinfer1::ILayer* where::build_layer(network_def network,
+                                         const picojson::object& layer_params,
+                                         nvinfer1::DataType dt,
+                                         const name_tensor_map& tensor_names,
+                                         const std::string& model_dir) {
+        (void)dt;
+        (void)model_dir;
+
+        auto source_elements =
+          param_get<picojson::array>(layer_params, "sources");
+        std::vector<nvinfer1::ITensor*> inputs;
+        for(picojson::value source_element : source_elements) {
+            const std::string& source = source_element.get<std::string>();
+            auto source_tensor = tensor_names.find(source);
+            if(source_tensor == tensor_names.end())
+                return NULL;
+            inputs.push_back(source_tensor->second);
+        }
+
+        auto p = new plugin::where(inputs[0]->getDimensions());
+        return network->addPlugin(inputs.data(), 3, *p);
     }
 
     int where::enqueue(int batchSize, const void* const* inputs, void** outputs,

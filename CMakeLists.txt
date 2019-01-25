@@ -19,6 +19,7 @@ if(WITH_NVTX)
 endif()
 
 INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}/include")
+INCLUDE_DIRECTORIES("${PROJECT_SOURCE_DIR}/src")
 
 # Check libraries
 include(CheckIncludeFileCXX)
@@ -72,4 +73,8 @@ endif()
 
 if(WITH_EXAMPLES)
     add_subdirectory(example_imagenet)
+endif()
+
+if(WITH_EXAMPLES)
+    add_subdirectory(example_external_plugin)
 endif()

@@ -6,8 +6,7 @@
 #include <cuda_fp16.h>
 
 #include "chainer_trt/chainer_trt.hpp"
-
-#include "../src/include/chainer_trt_impl.hpp"
+#include "include/plugins/broadcast_to.hpp"
 
 using namespace chainer_trt;
 using namespace chainer_trt::internal;

@@ -23,21 +23,21 @@
 #include "include/chainer_trt_impl.hpp"
 
 template <typename T>
-std::vector<T> load_values(const std::string &);
+std::vector<T> load_values(const std::string&);
 template <>
-std::vector<float> load_values(const std::string &filename);
+std::vector<float> load_values(const std::string& filename);
 template <>
-std::vector<__half> load_values(const std::string &filename);
+std::vector<__half> load_values(const std::string& filename);
 
 template <typename T>
-std::vector<T> load_values_binary(const std::string &);
+std::vector<T> load_values_binary(const std::string&);
 template <>
-std::vector<float> load_values_binary(const std::string &filename);
+std::vector<float> load_values_binary(const std::string& filename);
 template <>
-std::vector<__half> load_values_binary(const std::string &filename);
+std::vector<__half> load_values_binary(const std::string& filename);
 
 template <typename T>
-std::vector<T> repeat_array(const std::vector<T> &vec, int batch_size) {
+std::vector<T> repeat_array(const std::vector<T>& vec, int batch_size) {
     std::vector<T> out;
     for(int i = 0; i < batch_size; ++i)
         out.insert(out.end(), vec.begin(), vec.end());
@@ -48,26 +48,26 @@ void assert_eq(float t1, float t2);
 void assert_eq(int t1, int t2);
 
 template <class T>
-void assert_vector_eq(const std::vector<T> &vec1, const std::vector<T> &vec2) {
+void assert_vector_eq(const std::vector<T>& vec1, const std::vector<T>& vec2) {
     ASSERT_EQ(vec1.size(), vec2.size());
     for(unsigned i = 0; i < vec1.size(); ++i)
         assert_eq(vec1[i], vec2[i]);
 }
 template <>
-void assert_vector_eq(const std::vector<__half> &vec1,
-                      const std::vector<__half> &vec2);
+void assert_vector_eq(const std::vector<__half>& vec1,
+                      const std::vector<__half>& vec2);
 
-void assert_vector_near(const std::vector<float> &vec1,
-                        const std::vector<float> &vec2, float abs_error);
-void assert_vector_near(const std::vector<__half> &vec1,
-                        const std::vector<__half> &vec2, float abs_error);
+void assert_vector_near(const std::vector<float>& vec1,
+                        const std::vector<float>& vec2, float abs_error);
+void assert_vector_near(const std::vector<__half>& vec1,
+                        const std::vector<__half>& vec2, float abs_error);
 
-void assert_dims_eq(const nvinfer1::Dims &dim1, const nvinfer1::Dims &dim2);
+void assert_dims_eq(const nvinfer1::Dims& dim1, const nvinfer1::Dims& dim2);
 
 template <typename FloatType, typename PluginType>
-void run_plugin_assert_core(PluginType &plugin_src, int batch_size,
-                            const nvinfer1::Dims &in_dims,
-                            const std::string &dir, float allowed_err = 0,
+void run_plugin_assert_core(PluginType& plugin_src, int batch_size,
+                            const nvinfer1::Dims& in_dims,
+                            const std::string& dir, float allowed_err = 0,
                             bool load_binary = false) {
     cudaSetDevice(0);
 
@@ -99,8 +99,8 @@ void run_plugin_assert_core(PluginType &plugin_src, int batch_size,
 
     // Prepare data
     FloatType *in_gpu, *out_gpu;
-    cudaMalloc((void **)&in_gpu, sizeof(FloatType) * in_cpu.size());
-    cudaMalloc((void **)&out_gpu, sizeof(FloatType) * expected_out_cpu.size());
+    cudaMalloc((void**)&in_gpu, sizeof(FloatType) * in_cpu.size());
+    cudaMalloc((void**)&out_gpu, sizeof(FloatType) * expected_out_cpu.size());
     cudaMemcpy(in_gpu, in_cpu.data(), sizeof(FloatType) * in_cpu.size(),
                cudaMemcpyHostToDevice);
 
@@ -123,9 +123,9 @@ void run_plugin_assert_core(PluginType &plugin_src, int batch_size,
 }
 
 template <typename PluginType>
-void run_plugin_assert(PluginType &plugin_src, int batch_size,
+void run_plugin_assert(PluginType& plugin_src, int batch_size,
                        nvinfer1::DataType data_type,
-                       const nvinfer1::Dims &in_dims, const std::string &dir,
+                       const nvinfer1::Dims& in_dims, const std::string& dir,
                        float allowed_err = 0, bool load_binary = false) {
     const nvinfer1::Dims out_dim =
       plugin_src.getOutputDimensions(0, &in_dims, 1);
@@ -142,7 +142,7 @@ void run_plugin_assert(PluginType &plugin_src, int batch_size,
 }
 
 template <typename T>
-void write_vector_to_file(const std::string &fn, const std::vector<T> &values) {
+void write_vector_to_file(const std::string& fn, const std::vector<T>& values) {
     std::ofstream ofs(fn);
     for(unsigned i = 0; i < values.size(); ++i) {
         if(i != 0)
@@ -163,8 +163,8 @@ public:
     virtual int get_n_input() override { return 1; }
 
     virtual void get_batch(int i_batch, int input_idx,
-                           const std::vector<int> &dims,
-                           void *dst_buf_cpu) override {
+                           const std::vector<int>& dims,
+                           void* dst_buf_cpu) override {
         (void)i_batch;
         (void)input_idx;
 
@@ -172,6 +172,6 @@ public:
         const unsigned n_elements =
           chainer_trt::internal::calc_n_elements(dims);
         for(unsigned i = 0; i < n_elements; ++i)
-            ((float *)dst_buf_cpu)[i] = rng(mt);
+            ((float*)dst_buf_cpu)[i] = rng(mt);
     }
 };

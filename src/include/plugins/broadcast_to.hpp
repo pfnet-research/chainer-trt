@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "plugins_base.hpp"
+#include <chainer_trt/plugin.hpp>
 
 namespace chainer_trt {
 namespace plugin {
@@ -17,6 +17,11 @@ namespace plugin {
     public:
         broadcast_to(nvinfer1::Dims _in_dims, nvinfer1::Dims _out_dims);
         broadcast_to(const void* buf, size_t size);
+
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
 
         int initialize() override;
         void terminate() override;
@@ -39,12 +44,6 @@ namespace plugin {
 
         nvinfer1::Dims get_in_dims() const { return in_dims; };
         nvinfer1::Dims get_out_dims() const { return out_dims; };
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_broadcast_to";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }

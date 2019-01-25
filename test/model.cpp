@@ -12,8 +12,8 @@
 #include <cuda_runtime_api.h>
 
 #include "chainer_trt/chainer_trt.hpp"
+#include "chainer_trt/external/picojson.h"
 #include "include/chainer_trt_impl.hpp"
-#include "include/picojson.h"
 #include "test_helper.hpp"
 
 using TestParams =

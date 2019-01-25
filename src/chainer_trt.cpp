@@ -14,6 +14,7 @@
 #include <cuda_fp16.h>
 
 #include "chainer_trt/chainer_trt.hpp"
+#include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
 
 namespace chainer_trt {
@@ -52,7 +53,31 @@ layer_not_implemented::layer_not_implemented(const std::string& layer_name,
     err = oss.str();
 }
 
+// picojson_helper.hpp
+template <>
+int param_get<int>(const picojson::object& params, const std::string& key) {
+    return (int)param_get<double>(params, key);
+}
+template <>
+float param_get<float>(const picojson::object& params, const std::string& key) {
+    return (float)param_get<double>(params, key);
+}
+
 namespace internal {
+    nvinfer1::Dims shapes_to_dims(const picojson::array& shapes) {
+        assert(shapes.size() <= nvinfer1::Dims::MAX_DIMS); // <=8
+
+        nvinfer1::Dims dims;
+        dims.nbDims = shapes.size();
+
+        for(size_t j = 0; j < shapes.size(); j++) {
+            dims.d[j] = shapes[j].get<double>();
+            dims.type[j] = nvinfer1::DimensionType::kSPATIAL;
+        }
+        dims.type[0] = nvinfer1::DimensionType::kCHANNEL;
+        return dims;
+    }
+
     std::vector<std::string> split(const std::string& str, char sep) {
         std::vector<std::string> result;
         std::stringstream ss(str);

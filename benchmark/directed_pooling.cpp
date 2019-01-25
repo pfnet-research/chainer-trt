@@ -6,14 +6,13 @@
 #include <cuda_fp16.h>
 
 #include "chainer_trt/chainer_trt.hpp"
-
-#include "../src/include/chainer_trt_impl.hpp"
+#include "include/plugins/directed_pooling.hpp"
 
 using namespace chainer_trt;
 using namespace chainer_trt::internal;
 
 template <typename T>
-static void benchmark_directed_pooling_core(benchmark::State &state,
+static void benchmark_directed_pooling_core(benchmark::State& state,
                                             nvinfer1::DataType type) {
     cudaSetDevice(0);
 
@@ -24,8 +23,8 @@ static void benchmark_directed_pooling_core(benchmark::State &state,
     std::vector<T> in_cpu(c * in_w * in_h, T(1.0));
 
     T *in_gpu, *out_gpu;
-    cudaMalloc((void **)&in_gpu, sizeof(T) * in_cpu.size());
-    cudaMalloc((void **)&out_gpu, sizeof(T) * in_cpu.size());
+    cudaMalloc((void**)&in_gpu, sizeof(T) * in_cpu.size());
+    cudaMalloc((void**)&out_gpu, sizeof(T) * in_cpu.size());
     cudaMemcpy(in_gpu, in_cpu.data(), sizeof(T) * in_cpu.size(),
                cudaMemcpyHostToDevice);
 
@@ -44,15 +43,15 @@ static void benchmark_directed_pooling_core(benchmark::State &state,
     cudaFree(out_gpu);
 }
 
-static void benchmark_directed_pooling_float(benchmark::State &state) {
+static void benchmark_directed_pooling_float(benchmark::State& state) {
     benchmark_directed_pooling_core<float>(state, nvinfer1::DataType::kFLOAT);
 }
 
-static void benchmark_directed_pooling_half(benchmark::State &state) {
+static void benchmark_directed_pooling_half(benchmark::State& state) {
     benchmark_directed_pooling_core<__half>(state, nvinfer1::DataType::kHALF);
 }
 
-static void make_directed_pooling_args(benchmark::internal::Benchmark *b) {
+static void make_directed_pooling_args(benchmark::internal::Benchmark* b) {
     b->Args({128, 160, 80, 0, 0});
     b->Args({128, 160, 80, 0, 1});
     b->Args({128, 160, 80, 1, 0});

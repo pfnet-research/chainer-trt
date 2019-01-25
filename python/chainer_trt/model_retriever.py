@@ -118,7 +118,13 @@ class ModelRetriever(object):
             self.naming_map[label][layer] = len(self.naming_map[label]) + 1
         return '{}-{}'.format(label, self.naming_map[label][layer])
 
-    def _get_parent_name(self, input_):
+    def get_source_name(self, input_):
+        """Get name of the layer
+
+        :param input_: chainer.{Variable,VariableNode} inside the
+           computational graph
+        :return: Found or determined name of its creator
+        """
         parent = input_.creator
         if parent is None:      # This is an input layer
             return self._dump_input_and_get_name(input_)
@@ -178,7 +184,7 @@ class ModelRetriever(object):
         else:
             b = chainer.Variable(np.array([], dtype=np.float32))
 
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         dx = None
         dy = None
 
@@ -217,7 +223,7 @@ class ModelRetriever(object):
     def _dump_bn(self, func, initial_param):
         # http://docs.chainer.org/en/latest/_modules/chainer/functions/normalization/batch_normalization.html
         input_, gamma, beta, mean, var = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name, 'eps': func.eps}
         if beta.data is None or beta.data.size == 0:
             beta.data = np.zeros(mean.data.size)
@@ -229,7 +235,7 @@ class ModelRetriever(object):
 
     def _dump_shift(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {
             'source': parent_layer_name, 'kw': func.kw, 'kh': func.kh,
             'dx': func.dx, 'dy': func.dy
@@ -238,7 +244,7 @@ class ModelRetriever(object):
 
     def _dump_lrn(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {
             'source': parent_layer_name,
             'n': func.n, 'k': func.k, 'alpha': func.alpha, 'beta': func.beta
@@ -247,18 +253,18 @@ class ModelRetriever(object):
 
     def _dump_activation(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_leaky_relu(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name, 'slope': func.slope}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_concat(self, func, initial_param):
-        parent_layer_names = [self._get_parent_name(input_)
+        parent_layer_names = [self.get_source_name(input_)
                               for input_ in func.inputs]
         param = {
             'sources': parent_layer_names,
@@ -268,19 +274,19 @@ class ModelRetriever(object):
 
     def _dump_copy(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_softmax(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_reshape(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
 
         input_shape = input_.shape[1:]  # eliminate batch dim
         shape = list(func.shape[1:])    # eliminate batch dim
@@ -299,7 +305,7 @@ class ModelRetriever(object):
 
     def _dump_pooling(self, func, initial_param):
         input_ = func.inputs[0]
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {
             'source': parent_layer_name,
             'window_width': func.kw, 'window_height': func.kh,
@@ -317,7 +323,7 @@ class ModelRetriever(object):
             b = np.zeros(shape=W.shape[0], dtype=W.data.dtype)
             b = chainer.Variable(b)
 
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
 
         # Workaround: in Chainer input tensor to Linear layer is reshaped
         # so that ndim becomes 2 before applying mat dot.
@@ -335,7 +341,7 @@ class ModelRetriever(object):
         if parent_layer_type == 'Reshape':
             input_, = input_.creator.inputs
             old_parent_layer_name = parent_layer_name
-            parent_layer_name = self._get_parent_name(input_)
+            parent_layer_name = self.get_source_name(input_)
             if self.verbose:
                 print('Skipping {}, source of {} is now {}'
                       .format(old_parent_layer_name, initial_param["name"],
@@ -346,21 +352,21 @@ class ModelRetriever(object):
         return self._merge_dicts(initial_param, param), attr
 
     def _dump_eltw(self, func, initial_param):
-        parent_layer_names = [self._get_parent_name(input_)
+        parent_layer_names = [self.get_source_name(input_)
                               for input_ in func.inputs]
         param = {'sources': parent_layer_names}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_const_eltw(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name}
         attr = {'constant': func.value}
         return self._merge_dicts(initial_param, param), attr
 
     def _dump_broadcast(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         # Eliminate batch dim
         # [Note] The key name "output_shape" is already used in verbose mode,
         # so we should use other key name.
@@ -371,7 +377,7 @@ class ModelRetriever(object):
 
     def _dump_dropout(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {
             'source': parent_layer_name, 'dropout_ratio': func.dropout_ratio
         }
@@ -379,14 +385,14 @@ class ModelRetriever(object):
 
     def _dump_transpose(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         axes = [t - 1 for t in func.axes[1:]]   # Eliminate batch dim
         param = {'source': parent_layer_name, 'axes': axes}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_resize(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         param = {
             'source': parent_layer_name,
             'n_channels': input_.shape[1],
@@ -397,6 +403,8 @@ class ModelRetriever(object):
 
     def _dump_getitem(self, func, initial_param):
         input_, = func.inputs
+        parent_layer_name = self.get_source_name(input_)
+
         # --- type check ---
         for s in func.slices[1:]:
             if s is None:
@@ -404,7 +412,6 @@ class ModelRetriever(object):
                     'None is used in getitem, but it is not supported now.'
                     'You may explicitly use `reshape` method.')
 
-        parent_layer_name = self._get_parent_name(input_)
         slices = [[s.start, s.stop, s.step] if isinstance(s, slice) else s
                   for s in func.slices[1:]]   # without batch dim
         slices += [[None, None, None]] * (len(input_.shape) - len(func.slices))
@@ -412,7 +419,7 @@ class ModelRetriever(object):
         return self._merge_dicts(initial_param, param), None
 
     def _dump_where(self, func, initial_param):
-        parent_layer_names = [self._get_parent_name(input_)
+        parent_layer_names = [self.get_source_name(input_)
                               for input_ in func.inputs]
         param = {'sources': parent_layer_names}
         return self._merge_dicts(initial_param, param), None
@@ -420,7 +427,7 @@ class ModelRetriever(object):
     def _dump_unary(self, func, initial_param):
         initial_param['type'] = 'Unary'
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         if type(func) == F.math.exponential.Exp:
             op = 'exp'
         param = {'source': parent_layer_name, 'operation': op}
@@ -428,7 +435,7 @@ class ModelRetriever(object):
 
     def _dump_argmax(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         if func.axis != 1:
             msg = "Only axis=1 is supported for Argmax ({} is specified)"\
                 .format(func.axis)
@@ -438,7 +445,7 @@ class ModelRetriever(object):
 
     def _dump_resize_argmax(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
 
         if func.argmax.axis != 1:
             msg = "Only axis=1 is supported for Argmax ({} is specified)"\
@@ -455,7 +462,7 @@ class ModelRetriever(object):
 
     def _dump_sum(self, func, initial_param):
         input_, = func.inputs
-        parent_layer_name = self._get_parent_name(input_)
+        parent_layer_name = self.get_source_name(input_)
         if func.axis != (1,):
             msg = "Only axis=(1,) is supported for Sum ({} is specified)"\
                 .format(func.axis)
@@ -464,13 +471,13 @@ class ModelRetriever(object):
         return self._merge_dicts(initial_param, param), None
 
     def _dump_linear_interpolate(self, func, initial_param):
-        parent_layer_names = [self._get_parent_name(input_)
+        parent_layer_names = [self.get_source_name(input_)
                               for input_ in func.inputs]
         param = {'sources': parent_layer_names}
         return self._merge_dicts(initial_param, param), None
 
     def _dump_matmul(self, func, initial_param):
-        parent_layer_names = [self._get_parent_name(input_)
+        parent_layer_names = [self.get_source_name(input_)
                               for input_ in func.inputs]
         param = {
             'sources': parent_layer_names,
@@ -540,6 +547,27 @@ class ModelRetriever(object):
     _name_conversion_table = {
         'FixedBatchNormalization': 'BatchNormalizationFunction'
     }
+
+    def add_dump_function(self, type, dump_func):
+        """Add custom dump function
+
+        This is an interface to extend ModelRetriever to make it possible to
+        dump arbitrary type of layer.
+
+        :param type:
+          subclass of chainer.Function
+        :param dump_func:
+          method to dump the chainer.Function object.
+          Its signature should be
+          `dump_func(model_retriever, function_object, initial_params)`
+          Its return value should be a tuple of:
+          * parameter dictionary saved to model.json
+          * wight dictionary to save, or None if nothing to save
+        """
+        assert issubclass(type, chainer.Function) or \
+            issubclass(type, chainer.FunctionNode)
+        assert hasattr(dump_func, '__call__')
+        self._dump_func_map[type] = dump_func
 
     @classmethod
     def _save_tensor(cls, filename, ar):

@@ -12,68 +12,34 @@
 #include <cuda_fp16.h>
 
 #include "chainer_trt/chainer_trt.hpp"
+#include "chainer_trt/external/picojson.h"
+#include "chainer_trt/external/picojson_helper.hpp"
 #include "include/chainer_trt_impl.hpp"
-#include "include/picojson.h"
-#include "include/plugins/plugins.hpp"
 
 namespace chainer_trt {
 
-using NetDefPtr = std::shared_ptr<nvinfer1::INetworkDefinition>;
-using NameTensorMap = std::map<std::string, nvinfer1::ITensor*>;
+using network_def = std::shared_ptr<nvinfer1::INetworkDefinition>;
+using name_tensor_map = std::map<std::string, nvinfer1::ITensor*>;
+
+using chainer_trt::param_get;
 
 // ctor
 model::model() {}
 
 namespace internal {
-    template <typename T>
-    T param_get(const picojson::object& params, const std::string& key) {
-        auto p = params.find(key);
-        if(p == params.end()) {
-            std::ostringstream oss;
-            oss << "Error: key \"" << key << "\" is not found in the ";
-            oss << "parameter dictionary ";
-            oss << picojson::value(params).serialize();
-            throw std::runtime_error(oss.str());
-        }
-        return p->second.get<T>();
-    }
-    template <>
-    int param_get<int>(const picojson::object& params, const std::string& key) {
-        return (int)param_get<double>(params, key);
-    }
-    template <>
-    float param_get<float>(const picojson::object& params,
-                           const std::string& key) {
-        return (float)param_get<double>(params, key);
-    }
-
-    nvinfer1::Dims shapes_to_dims(const picojson::array& shapes) {
-        assert(shapes.size() <= nvinfer1::Dims::MAX_DIMS); // <=8
-
-        nvinfer1::Dims dims;
-        dims.nbDims = shapes.size();
-
-        for(size_t j = 0; j < shapes.size(); j++) {
-            dims.d[j] = shapes[j].get<double>();
-            dims.type[j] = nvinfer1::DimensionType::kSPATIAL;
-        }
-        dims.type[0] = nvinfer1::DimensionType::kCHANNEL;
-        return dims;
-    }
-
-    void build_input(NetDefPtr network, const picojson::object& params,
-                     NameTensorMap& name_output_map) {
+    void build_input(network_def network, const picojson::object& params,
+                     name_tensor_map& tensor_names) {
         auto name = param_get<std::string>(params, "name");
         auto shape = param_get<picojson::array>(params, "shape");
 
         nvinfer1::Dims dims = shapes_to_dims(shape);
 
-        name_output_map[name] =
+        tensor_names[name] =
           network->addInput(name.c_str(), nvinfer1::DataType::kFLOAT, dims);
     }
 
     nvinfer1::ILayer*
-    build_constant_input(NetDefPtr network, const picojson::object& params,
+    build_constant_input(network_def network, const picojson::object& params,
                          const std::string& model_dir,
                          std::shared_ptr<internal::weights_manager> weights) {
         auto input_tensor = param_get<std::string>(params, "input_tensor");
@@ -84,89 +50,17 @@ namespace internal {
         return network->addConstant(shapes_to_dims(shape), w);
     }
 
-    nvinfer1::ILayer* build_broadcast_to(NetDefPtr network,
-                                         const picojson::object& params,
-                                         nvinfer1::DataType dt,
-                                         const NameTensorMap& name_output_map) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto input_shapes = param_get<picojson::array>(params, "in_shape");
-        auto output_shapes = param_get<picojson::array>(params, "out_shape");
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        // Create dimensions
-        nvinfer1::Dims in_dims, out_dims;
-        in_dims = shapes_to_dims(input_shapes);
-        out_dims = shapes_to_dims(output_shapes);
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::broadcast_to(in_dims, out_dims);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
-    nvinfer1::ILayer* build_argmax(NetDefPtr network,
-                                   const picojson::object& params,
-                                   nvinfer1::DataType dt,
-                                   const NameTensorMap& name_output_map) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto shapes = param_get<picojson::array>(params, "shape");
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::argmax(shapes_to_dims(shapes));
-        auto res_layer = network->addPluginExt(&input, 1, *p);
-        return res_layer;
-    }
-
-    nvinfer1::ILayer*
-    build_resize_argmax(NetDefPtr network, const picojson::object& params,
-                        nvinfer1::DataType dt,
-                        const NameTensorMap& name_output_map) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto input_hw = param_get<picojson::array>(params, "input_hw");
-        auto output_hw = param_get<picojson::array>(params, "output_hw");
-
-        const int n_channels = (int)param_get<double>(params, "n_channels");
-        const int in_h = (int)input_hw[0].get<double>();
-        const int in_w = (int)input_hw[1].get<double>();
-        const int out_h = (int)output_hw[0].get<double>();
-        const int out_w = (int)output_hw[1].get<double>();
-        if(in_h <= 1 || in_w <= 1)
-            throw std::range_error("resize input_hw must be larger than 1");
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p =
-          new plugin::resize_argmax(n_channels, in_h, in_w, out_h, out_w);
-        return network->addPlugin(&input, 1, *p);
-    }
-
-    nvinfer1::ILayer*
-    build_linear_interpolate(NetDefPtr network, const picojson::object& params,
-                             nvinfer1::DataType dt,
-                             const NameTensorMap& name_output_map) {
+    nvinfer1::ILayer* build_linear_interpolate(
+      network_def network, const picojson::object& params,
+      nvinfer1::DataType dt, const name_tensor_map& tensor_names) {
         (void)dt;
 
         auto source_elements = param_get<picojson::array>(params, "sources");
         std::vector<nvinfer1::ITensor*> inputs;
         for(picojson::value source_element : source_elements) {
             const std::string& source = source_element.get<std::string>();
-            auto source_tensor = name_output_map.find(source);
-            if(source_tensor == name_output_map.end())
+            auto source_tensor = tensor_names.find(source);
+            if(source_tensor == tensor_names.end())
                 return NULL;
             inputs.push_back(source_tensor->second);
         }
@@ -185,29 +79,9 @@ namespace internal {
                                        nvinfer1::ElementWiseOperation::kSUM);
     }
 
-    nvinfer1::ILayer* build_where(NetDefPtr network,
-                                  const picojson::object& params,
-                                  nvinfer1::DataType dt,
-                                  const NameTensorMap& name_output_map) {
-        (void)dt;
-
-        auto source_elements = param_get<picojson::array>(params, "sources");
-        std::vector<nvinfer1::ITensor*> inputs;
-        for(picojson::value source_element : source_elements) {
-            const std::string& source = source_element.get<std::string>();
-            auto source_tensor = name_output_map.find(source);
-            if(source_tensor == name_output_map.end())
-                return NULL;
-            inputs.push_back(source_tensor->second);
-        }
-
-        auto p = new plugin::where(inputs[0]->getDimensions());
-        return network->addPlugin(inputs.data(), 3, *p);
-    }
-
     nvinfer1::ILayer*
-    build_conv(NetDefPtr network, const picojson::object& params,
-               nvinfer1::DataType dt, const NameTensorMap& name_output_map,
+    build_conv(network_def network, const picojson::object& params,
+               nvinfer1::DataType dt, const name_tensor_map& tensor_names,
                const std::string& model_dir,
                std::shared_ptr<internal::weights_manager> weights) {
         auto source = param_get<std::string>(params, "source");
@@ -233,8 +107,8 @@ namespace internal {
                                  ? param_get<int>(params, "dilation_x")
                                  : 1;
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
@@ -253,8 +127,8 @@ namespace internal {
     }
 
     nvinfer1::ILayer*
-    build_deconv(NetDefPtr network, const picojson::object& params,
-                 nvinfer1::DataType dt, const NameTensorMap& name_output_map,
+    build_deconv(network_def network, const picojson::object& params,
+                 nvinfer1::DataType dt, const name_tensor_map& tensor_names,
                  const std::string& model_dir,
                  std::shared_ptr<internal::weights_manager> weights) {
         auto source = param_get<std::string>(params, "source");
@@ -270,8 +144,8 @@ namespace internal {
         const auto bias_file =
           param_get<std::string>(params, "bias_weights_file");
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         const int groups = params.find("groups") != params.end()
@@ -294,33 +168,9 @@ namespace internal {
         return deconv;
     }
 
-    nvinfer1::ILayer* build_resize(NetDefPtr network,
-                                   const picojson::object& params,
-                                   nvinfer1::DataType dt,
-                                   const NameTensorMap& name_output_map) {
-        (void)dt;
-
-        auto source = param_get<std::string>(params, "source");
-        auto input_hw = param_get<picojson::array>(params, "input_hw");
-        auto output_hw = param_get<picojson::array>(params, "output_hw");
-        auto n_channels = param_get<int>(params, "n_channels");
-        const int in_h = (int)input_hw[0].get<double>();
-        const int in_w = (int)input_hw[1].get<double>();
-        const int out_h = (int)output_hw[0].get<double>();
-        const int out_w = (int)output_hw[1].get<double>();
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::resize(n_channels, in_h, in_w, out_h, out_w);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
     nvinfer1::ILayer*
-    build_bn(NetDefPtr network, const picojson::object& params,
-             nvinfer1::DataType dt, NameTensorMap& name_output_map,
+    build_bn(network_def network, const picojson::object& params,
+             nvinfer1::DataType dt, name_tensor_map& tensor_names,
              const std::string& model_dir,
              std::shared_ptr<internal::weights_manager> weights) {
         auto source = param_get<std::string>(params, "source");
@@ -330,8 +180,8 @@ namespace internal {
         auto beta_f = param_get<std::string>(params, "beta_weights_file");
         const float eps = param_get<float>(params, "eps");
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         constexpr auto fp32 = nvinfer1::DataType::kFLOAT;
@@ -386,80 +236,26 @@ namespace internal {
                                  gamma, none);
     }
 
-    nvinfer1::ILayer* build_shift(NetDefPtr network,
-                                  const picojson::object& params,
-                                  const NameTensorMap& name_output_map) {
-        const auto source = param_get<std::string>(params, "source");
-        const int kw = param_get<int>(params, "kw");
-        const int kh = param_get<int>(params, "kh");
-        const int dx = param_get<int>(params, "dx");
-        const int dy = param_get<int>(params, "dy");
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::shift(input->getDimensions(), kw, kh, dx, dy);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
-    nvinfer1::ILayer*
-    build_directed_pooling(NetDefPtr network, const picojson::object& params,
-                           const NameTensorMap& name_output_map) {
-        const auto source = param_get<std::string>(params, "source");
-        const auto dir =
-          param_get<std::string>(params, "dir"); // left, right, top, bottom
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        int horizontal = 0;
-        int rev = 0;
-        if(dir == "left") {
-            horizontal = 1;
-            rev = 1;
-        } else if(dir == "right") {
-            horizontal = 1;
-            rev = 0;
-        } else if(dir == "top") {
-            horizontal = 0;
-            rev = 1;
-        } else if(dir == "bottom") {
-            horizontal = 0;
-            rev = 0;
-        } else {
-            throw std::runtime_error(
-              "Unknown dir parameter for directed_pooling.");
-        }
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p =
-          new plugin::directed_pooling(input->getDimensions(), horizontal, rev);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
-    nvinfer1::ILayer* build_lrn(NetDefPtr network,
+    nvinfer1::ILayer* build_lrn(network_def network,
                                 const picojson::object& params,
-                                const NameTensorMap& name_output_map) {
+                                const name_tensor_map& tensor_names) {
         const auto source = param_get<std::string>(params, "source");
         const int window = param_get<int>(params, "n");
         const float alpha = param_get<float>(params, "alpha");
         const float beta = param_get<float>(params, "beta");
         const float k = param_get<float>(params, "k");
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
         return network->addLRN(*input, window, alpha, beta, k);
     }
 
-    nvinfer1::ILayer* build_matmul(NetDefPtr network,
+    nvinfer1::ILayer* build_matmul(network_def network,
                                    const picojson::object& params,
-                                   const NameTensorMap& name_output_map) {
+                                   const name_tensor_map& tensor_names) {
         const auto sources = param_get<picojson::array>(params, "sources");
         const bool transa = param_get<bool>(params, "transa");
         const bool transb = param_get<bool>(params, "transb");
@@ -467,8 +263,8 @@ namespace internal {
         std::vector<nvinfer1::ITensor*> inputs;
         for(picojson::value source_element : sources) {
             const std::string& source = source_element.get<std::string>();
-            auto source_tensor = name_output_map.find(source);
-            if(source_tensor == name_output_map.end())
+            auto source_tensor = tensor_names.find(source);
+            if(source_tensor == tensor_names.end())
                 return NULL;
             inputs.push_back(source_tensor->second);
         }
@@ -478,16 +274,16 @@ namespace internal {
                                           transb);
     }
 
-    nvinfer1::ILayer* build_eltw(NetDefPtr network,
+    nvinfer1::ILayer* build_eltw(network_def network,
                                  const picojson::object& params,
-                                 const NameTensorMap& name_output_map,
+                                 const name_tensor_map& tensor_names,
                                  nvinfer1::ElementWiseOperation op_type) {
         const auto sources = param_get<picojson::array>(params, "sources");
         std::vector<nvinfer1::ITensor*> inputs;
         for(picojson::value source_element : sources) {
             const std::string& source = source_element.get<std::string>();
-            auto source_tensor = name_output_map.find(source);
-            if(source_tensor == name_output_map.end())
+            auto source_tensor = tensor_names.find(source);
+            if(source_tensor == tensor_names.end())
                 return NULL;
             inputs.push_back(source_tensor->second);
         }
@@ -495,60 +291,18 @@ namespace internal {
         return network->addElementWise(*inputs[0], *inputs[1], op_type);
     }
 
-    nvinfer1::ILayer*
-    build_eltw_constant(NetDefPtr network, const picojson::object& params,
-                        const NameTensorMap& name_output_map,
-                        const std::string model_dir,
-                        nvinfer1::ElementWiseOperation op_type) {
-        (void)op_type;
-
-        const auto type = param_get<std::string>(params, "type");
-        const auto source = param_get<std::string>(params, "source");
-        const auto constant_fn =
-          param_get<std::string>(params, "constant_weights_file");
-
-        nvinfer1::ElementWiseOperation op;
-        if(type == "AddConstant")
-            op = nvinfer1::ElementWiseOperation::kSUM;
-        else if(type == "SubFromConstant")
-            op = nvinfer1::ElementWiseOperation::kSUB;
-        else if(type == "MulConstant")
-            op = nvinfer1::ElementWiseOperation::kPROD;
-        else if(type == "DivFromConstant")
-            op = nvinfer1::ElementWiseOperation::kDIV;
-        else
-            return nullptr;
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        // Load constant values
-        internal::weights_manager weights;
-        nvinfer1::Weights w = weights.load_weights_as(
-          model_dir + "/" + constant_fn, nvinfer1::DataType::kFLOAT);
-        std::vector<float> values;
-        for(int i = 0; i < w.count; ++i)
-            values.push_back(((float*)w.values)[i]);
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p =
-          new plugin::constant_elementwise(input->getDimensions(), op, values);
-        return network->addPlugin(&input, 1, *p);
-    }
-
-    nvinfer1::ILayer* build_reshape(NetDefPtr network,
+    nvinfer1::ILayer* build_reshape(network_def network,
                                     const picojson::object& params,
                                     nvinfer1::DataType dt,
-                                    const NameTensorMap& name_output_map) {
+                                    const name_tensor_map& tensor_names) {
         (void)dt;
 
         const auto source = param_get<std::string>(params, "source");
         const auto shape = param_get<picojson::array>(params, "shape");
         nvinfer1::Dims dims = shapes_to_dims(shape);
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
@@ -557,14 +311,14 @@ namespace internal {
         return shuffle;
     }
 
-    nvinfer1::ILayer* build_transpose(NetDefPtr network,
+    nvinfer1::ILayer* build_transpose(network_def network,
                                       const picojson::object& params,
-                                      const NameTensorMap& name_output_map) {
+                                      const name_tensor_map& tensor_names) {
         const auto source = param_get<std::string>(params, "source");
         const auto axes = param_get<picojson::array>(params, "axes");
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
@@ -585,36 +339,21 @@ namespace internal {
     }
 
     nvinfer1::ILayer*
-    build_activation(NetDefPtr network, const picojson::object& params,
-                     const NameTensorMap& name_output_map,
+    build_activation(network_def network, const picojson::object& params,
+                     const name_tensor_map& tensor_names,
                      const nvinfer1::ActivationType activation_type) {
         const auto source = param_get<std::string>(params, "source");
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
         return network->addActivation(*input, activation_type);
     }
 
-    nvinfer1::ILayer* build_leaky_relu(NetDefPtr network,
-                                       const picojson::object& params,
-                                       const NameTensorMap& name_output_map) {
-        const auto source = param_get<std::string>(params, "source");
-        const float slope = param_get<double>(params, "slope");
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::leaky_relu(input->getDimensions(), slope);
-        return network->addPluginExt(&input, 1, *p);
-    }
-
     nvinfer1::ILayer*
-    build_pooling(NetDefPtr network, const picojson::object& params,
-                  const NameTensorMap& name_output_map,
-                  nvinfer1::PoolingType pt,
+    build_pooling(network_def network, const picojson::object& params,
+                  const name_tensor_map& tensor_names, nvinfer1::PoolingType pt,
                   std::shared_ptr<internal::output_dimensions_formula>
                     pool_outdim_formula) {
         const auto source = param_get<std::string>(params, "source");
@@ -629,8 +368,8 @@ namespace internal {
 
         pool_outdim_formula->cover_all_flags[name] = cover_all;
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
@@ -642,8 +381,8 @@ namespace internal {
     }
 
     nvinfer1::ILayer*
-    build_linear(NetDefPtr network, const picojson::object& params,
-                 nvinfer1::DataType dt, const NameTensorMap& name_output_map,
+    build_linear(network_def network, const picojson::object& params,
+                 nvinfer1::DataType dt, const name_tensor_map& tensor_names,
                  const std::string& model_dir,
                  std::shared_ptr<internal::weights_manager> weights) {
         const auto source = param_get<std::string>(params, "source");
@@ -653,8 +392,8 @@ namespace internal {
         const auto bias_file =
           param_get<std::string>(params, "bias_weights_file");
 
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
@@ -666,21 +405,21 @@ namespace internal {
                                           bias_weight);
     }
 
-    nvinfer1::ILayer* build_softmax(NetDefPtr network,
+    nvinfer1::ILayer* build_softmax(network_def network,
                                     const picojson::object& params,
-                                    const NameTensorMap& name_output_map) {
+                                    const name_tensor_map& tensor_names) {
         const auto source = param_get<std::string>(params, "source");
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::ITensor* input = source_tensor->second;
         return network->addSoftMax(*input);
     }
 
-    nvinfer1::ILayer* build_concat(NetDefPtr network,
+    nvinfer1::ILayer* build_concat(network_def network,
                                    const picojson::object& params,
-                                   const NameTensorMap& name_output_map) {
+                                   const name_tensor_map& tensor_names) {
         const int axis = params.find("axis") != params.end()
                            ? param_get<int>(params, "axis")
                            : 0;
@@ -691,8 +430,8 @@ namespace internal {
 
         for(size_t i = 0; i < source_elements.size(); ++i) {
             const std::string& source = source_elements[i].get<std::string>();
-            auto source_tensor = name_output_map.find(source);
-            if(source_tensor == name_output_map.end())
+            auto source_tensor = tensor_names.find(source);
+            if(source_tensor == tensor_names.end())
                 return NULL;
             sources[i] = source_tensor->second;
         }
@@ -703,13 +442,13 @@ namespace internal {
         return concat;
     }
 
-    nvinfer1::ILayer* build_unary(NetDefPtr network,
+    nvinfer1::ILayer* build_unary(network_def network,
                                   const picojson::object& params,
-                                  const NameTensorMap& name_output_map) {
+                                  const name_tensor_map& tensor_names) {
         const auto type = param_get<std::string>(params, "type");
         const auto source = param_get<std::string>(params, "source");
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
             return NULL;
 
         nvinfer1::UnaryOperation op;
@@ -722,71 +461,10 @@ namespace internal {
         return network->addUnary(*input, op);
     }
 
-    nvinfer1::ILayer* build_getitem(NetDefPtr network,
-                                    const picojson::object& params,
-                                    const NameTensorMap& name_output_map) {
-        const auto source = param_get<std::string>(params, "source");
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        auto err_msg =
-          "Each of GetItem parameter has to be "
-          "3-element list, or a single integer."
-          "Fix ModelRetriever";
-
-        // Parse array of array to list of shape
-        const auto json_slices = param_get<picojson::array>(params, "slices");
-        std::vector<plugin::slice> slices;
-        for(const picojson::value& json_s : json_slices) {
-            if(json_s.is<picojson::array>()) {
-                auto json_slice = json_s.get<picojson::array>();
-                if(json_slice.size() != 3)
-                    throw std::runtime_error(err_msg);
-
-                auto getvalornull = [](const picojson::value& o) {
-                    return o.is<picojson::null>() ? plugin::slice::optint()
-                                                  : (int)o.get<double>();
-                };
-                plugin::slice s(getvalornull(json_slice[0]),
-                                getvalornull(json_slice[1]),
-                                getvalornull(json_slice[2]));
-                slices.push_back(s);
-            } else if(json_s.is<double>()) {
-                slices.push_back(plugin::slice((int)json_s.get<double>()));
-            } else {
-                throw std::runtime_error(err_msg);
-            }
-        }
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::get_item(input->getDimensions(), slices);
-        assert(input->getDimensions().nbDims ==
-               static_cast<signed>(slices.size()));
-        return network->addPlugin(&input, 1, *p);
-    }
-
-    nvinfer1::ILayer* build_sum(NetDefPtr network,
-                                const picojson::object& params,
-                                nvinfer1::DataType dt,
-                                const NameTensorMap& name_output_map) {
-        (void)dt;
-
-        const auto source = param_get<std::string>(params, "source");
-        const auto shapes = param_get<picojson::array>(params, "shape");
-
-        auto source_tensor = name_output_map.find(source);
-        if(source_tensor == name_output_map.end())
-            return NULL;
-
-        nvinfer1::ITensor* input = source_tensor->second;
-        auto p = new plugin::sum(shapes_to_dims(shapes));
-        return network->addPluginExt(&input, 1, *p);
-    }
-
-    build_context make_network(std::shared_ptr<nvinfer1::IBuilder> builder,
-                               const std::string& model_dir,
-                               nvinfer1::DataType dt) {
+    build_context
+    make_network(std::shared_ptr<nvinfer1::IBuilder> builder,
+                 const std::string& model_dir, nvinfer1::DataType dt,
+                 std::shared_ptr<plugin::plugin_factory> factory) {
         std::ifstream fs;
         fs.open((model_dir + "/model.json").c_str());
 
@@ -806,7 +484,7 @@ namespace internal {
             n->destroy();
         };
         build_cxt.network =
-          NetDefPtr(builder->createNetwork(), inetwork_destroyer);
+          network_def(builder->createNetwork(), inetwork_destroyer);
 
         // cover_all mode switcher (see also: chainer cover_all mode)
         build_cxt.pool_outdim_formula =
@@ -814,7 +492,7 @@ namespace internal {
         build_cxt.network->setPoolingOutputDimensionsFormula(
           build_cxt.pool_outdim_formula.get());
 
-        NameTensorMap name_output_map;
+        name_tensor_map tensor_names;
         build_cxt.weights = std::make_shared<internal::weights_manager>();
 
         std::queue<picojson::value> layer_queue;
@@ -834,7 +512,7 @@ namespace internal {
             // Check input
             if(type == "input") {
                 internal::build_input(build_cxt.network, layer_params,
-                                      name_output_map);
+                                      tensor_names);
                 continue;
             }
 
@@ -844,138 +522,91 @@ namespace internal {
             if(type == "Copy") {
                 const std::string& source =
                   layer_params.find("source")->second.get<std::string>();
-                auto source_tensor = name_output_map.find(source);
-                if(source_tensor != name_output_map.end()) {
-                    name_output_map[name] = source_tensor->second;
+                auto source_tensor = tensor_names.find(source);
+                if(source_tensor != tensor_names.end()) {
+                    tensor_names[name] = source_tensor->second;
                     continue;
                 }
             }
 
             // Check normal layers
-            if(type == "ConstantInput")
+            if(factory->is_registered(type))
+                l = factory->build_plugin(build_cxt.network, layer_params, dt,
+                                          tensor_names, model_dir);
+            else if(type == "ConstantInput")
                 l = build_constant_input(build_cxt.network, layer_params,
                                          model_dir, build_cxt.weights);
             else if(type == "Convolution2DFunction")
                 l = build_conv(build_cxt.network, layer_params, dt,
-                               name_output_map, model_dir, build_cxt.weights);
+                               tensor_names, model_dir, build_cxt.weights);
             else if(type == "Deconvolution2DFunction")
                 l = build_deconv(build_cxt.network, layer_params, dt,
-                                 name_output_map, model_dir, build_cxt.weights);
+                                 tensor_names, model_dir, build_cxt.weights);
             else if(type == "BatchNormalizationFunction" ||
                     type == "BatchNormalization")
-                l = build_bn(build_cxt.network, layer_params, dt,
-                             name_output_map, model_dir, build_cxt.weights);
-            else if(type == "Shift")
-                l =
-                  build_shift(build_cxt.network, layer_params, name_output_map);
-            else if(type == "DirectedPooling" or type == "CornerPooling")
-                l = build_directed_pooling(build_cxt.network, layer_params,
-                                           name_output_map);
+                l = build_bn(build_cxt.network, layer_params, dt, tensor_names,
+                             model_dir, build_cxt.weights);
             else if(type == "ReLU")
                 l = build_activation(build_cxt.network, layer_params,
-                                     name_output_map,
+                                     tensor_names,
                                      nvinfer1::ActivationType::kRELU);
             else if(type == "Sigmoid")
                 l = build_activation(build_cxt.network, layer_params,
-                                     name_output_map,
+                                     tensor_names,
                                      nvinfer1::ActivationType::kSIGMOID);
             else if(type == "Tanh")
                 l = build_activation(build_cxt.network, layer_params,
-                                     name_output_map,
+                                     tensor_names,
                                      nvinfer1::ActivationType::kTANH);
-            else if(type == "LeakyReLU")
-                l = build_leaky_relu(build_cxt.network, layer_params,
-                                     name_output_map);
             else if(type == "MaxPooling2D")
-                l = build_pooling(build_cxt.network, layer_params,
-                                  name_output_map, nvinfer1::PoolingType::kMAX,
+                l = build_pooling(build_cxt.network, layer_params, tensor_names,
+                                  nvinfer1::PoolingType::kMAX,
                                   build_cxt.pool_outdim_formula);
             else if(type == "AveragePooling2D")
-                l = build_pooling(build_cxt.network, layer_params,
-                                  name_output_map,
+                l = build_pooling(build_cxt.network, layer_params, tensor_names,
                                   nvinfer1::PoolingType::kAVERAGE,
                                   build_cxt.pool_outdim_formula);
             else if(type == "LinearFunction")
                 l = build_linear(build_cxt.network, layer_params, dt,
-                                 name_output_map, model_dir, build_cxt.weights);
+                                 tensor_names, model_dir, build_cxt.weights);
             else if(type == "Softmax")
-                l = build_softmax(build_cxt.network, layer_params,
-                                  name_output_map);
+                l =
+                  build_softmax(build_cxt.network, layer_params, tensor_names);
             else if(type == "LocalResponseNormalization")
-                l = build_lrn(build_cxt.network, layer_params, name_output_map);
+                l = build_lrn(build_cxt.network, layer_params, tensor_names);
             else if(type == "MatMul")
-                l = build_matmul(build_cxt.network, layer_params,
-                                 name_output_map);
+                l = build_matmul(build_cxt.network, layer_params, tensor_names);
             else if(type == "Add")
-                l = build_eltw(build_cxt.network, layer_params, name_output_map,
+                l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kSUM);
             else if(type == "Sub")
-                l = build_eltw(build_cxt.network, layer_params, name_output_map,
+                l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kSUB);
             else if(type == "Mul")
-                l = build_eltw(build_cxt.network, layer_params, name_output_map,
+                l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kPROD);
             else if(type == "Div")
-                l = build_eltw(build_cxt.network, layer_params, name_output_map,
+                l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kDIV);
             else if(type == "Maximum")
-                l = build_eltw(build_cxt.network, layer_params, name_output_map,
+                l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kMAX);
             else if(type == "Minimum")
-                l = build_eltw(build_cxt.network, layer_params, name_output_map,
+                l = build_eltw(build_cxt.network, layer_params, tensor_names,
                                nvinfer1::ElementWiseOperation::kMIN);
-            else if(type == "AddConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        name_output_map, model_dir,
-                                        nvinfer1::ElementWiseOperation::kSUM);
-            else if(type == "SubFromConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        name_output_map, model_dir,
-                                        nvinfer1::ElementWiseOperation::kSUB);
-            else if(type == "MulConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        name_output_map, model_dir,
-                                        nvinfer1::ElementWiseOperation::kPROD);
-            else if(type == "DivFromConstant")
-                l = build_eltw_constant(build_cxt.network, layer_params,
-                                        name_output_map, model_dir,
-                                        nvinfer1::ElementWiseOperation::kDIV);
             else if(type == "Reshape")
                 l = build_reshape(build_cxt.network, layer_params, dt,
-                                  name_output_map);
+                                  tensor_names);
             else if(type == "Transpose")
                 l = build_transpose(build_cxt.network, layer_params,
-                                    name_output_map);
+                                    tensor_names);
             else if(type == "Concat")
-                l = build_concat(build_cxt.network, layer_params,
-                                 name_output_map);
+                l = build_concat(build_cxt.network, layer_params, tensor_names);
             else if(type == "Unary")
-                l =
-                  build_unary(build_cxt.network, layer_params, name_output_map);
-            else if(type == "GetItem")
-                l = build_getitem(build_cxt.network, layer_params,
-                                  name_output_map);
-            else if(type == "ResizeImages")
-                l = build_resize(build_cxt.network, layer_params, dt,
-                                 name_output_map);
-            else if(type == "BroadcastTo")
-                l = build_broadcast_to(build_cxt.network, layer_params, dt,
-                                       name_output_map);
-            else if(type == "ArgMax")
-                l = build_argmax(build_cxt.network, layer_params, dt,
-                                 name_output_map);
-            else if(type == "ResizeArgmax")
-                l = build_resize_argmax(build_cxt.network, layer_params, dt,
-                                        name_output_map);
-            else if(type == "Sum")
-                l = build_sum(build_cxt.network, layer_params, dt,
-                              name_output_map);
+                l = build_unary(build_cxt.network, layer_params, tensor_names);
             else if(type == "LinearInterpolate")
                 l = build_linear_interpolate(build_cxt.network, layer_params,
-                                             dt, name_output_map);
-            else if(type == "Where")
-                l = build_where(build_cxt.network, layer_params, dt,
-                                name_output_map);
+                                             dt, tensor_names);
             else
                 throw layer_not_implemented(name, type);
 
@@ -988,7 +619,7 @@ namespace internal {
             }
 
             l->setName(name.c_str());
-            name_output_map[name] = l->getOutput(0);
+            tensor_names[name] = l->getOutput(0);
             l->getOutput(0)->setName(name.c_str());
         }
 
@@ -1017,7 +648,7 @@ namespace internal {
                 throw std::runtime_error("Unknown error in outputs field");
             }
 
-            nvinfer1::ITensor* output_tensor = name_output_map[layer_name];
+            nvinfer1::ITensor* output_tensor = tensor_names[layer_name];
             output_tensor->setName(output_name.c_str());
             build_cxt.network->markOutput(*output_tensor);
         }
@@ -1049,68 +680,99 @@ void model::set_n_inputs_and_outputs() {
             n_outputs += 1;
 }
 
-std::shared_ptr<model> model::build_fp32(const std::string& model_dir,
-                                         double workspace_gb,
-                                         int max_batch_size) {
-    auto builder = internal::make_builder(workspace_gb, max_batch_size);
-    auto nw =
-      internal::make_network(builder, model_dir, nvinfer1::DataType::kFLOAT);
+std::shared_ptr<model> model::build(const build_param_fp32& param) {
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
+    auto nw = internal::make_network(b, param.model_dir,
+                                     nvinfer1::DataType::kFLOAT, param.factory);
     return nw.build();
 }
 
-std::shared_ptr<model> model::build_fp16(const std::string& model_dir,
-                                         double workspace_gb,
-                                         int max_batch_size) {
-    auto builder = internal::make_builder(workspace_gb, max_batch_size);
-    builder->setHalf2Mode(true);
-    auto nw =
-      internal::make_network(builder, model_dir, nvinfer1::DataType::kHALF);
+std::shared_ptr<model> model::build(const build_param_fp16& param) {
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
+    b->setHalf2Mode(true);
+    auto nw = internal::make_network(b, param.model_dir,
+                                     nvinfer1::DataType::kHALF, param.factory);
     return nw.build();
 }
 
-std::shared_ptr<model>
-model::build_int8(const std::string& model_dir,
-                  std::shared_ptr<calibration_stream> calib_stream,
-                  double workspace_gb, int max_batch_size,
-                  const std::string& out_cache_file) {
-    auto builder = internal::make_builder(workspace_gb, max_batch_size);
+std::shared_ptr<model> model::build(const build_param_int8& param) {
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
     std::cout << "Int8 calibration enabled" << std::endl;
-    builder->setInt8Mode(true);
+    b->setInt8Mode(true);
 
-    auto build_cxt =
-      internal::make_network(builder, model_dir, nvinfer1::DataType::kFLOAT);
+    auto build_cxt = internal::make_network(
+      b, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
 
     std::vector<nvinfer1::Dims> dims;
     for(int i = 0; i < build_cxt.network->getNbInputs(); ++i)
         dims.push_back(build_cxt.network->getInput(i)->getDimensions());
 
     auto calibrator = std::make_unique<internal::int8_entropy_calibrator>(
-      dims, calib_stream, out_cache_file);
-    builder->setInt8Calibrator(calibrator.get());
+      dims, param.calib_stream, param.out_cache_file);
+    b->setInt8Calibrator(calibrator.get());
 
     return build_cxt.build();
 }
 
-std::shared_ptr<model> model::build_int8_cache(const std::string& model_dir,
-                                               const std::string& in_cache_file,
-                                               double workspace_gb,
-                                               int max_batch_size) {
-    auto builder = internal::make_builder(workspace_gb, max_batch_size);
+std::shared_ptr<model> model::build(const build_param_int8_cached& param) {
+    auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
     std::cout << "Int8 calibration enabled (from cache \"";
-    std::cout << in_cache_file << "\")" << std::endl;
-    builder->setInt8Mode(true);
+    std::cout << param.in_cache_file << "\")" << std::endl;
+    b->setInt8Mode(true);
 
-    auto build_cxt =
-      internal::make_network(builder, model_dir, nvinfer1::DataType::kFLOAT);
+    auto build_cxt = internal::make_network(
+      b, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
 
     auto calibrator =
-      std::make_unique<internal::int8_entropy_calibrator_cached>(in_cache_file);
-    builder->setInt8Calibrator(calibrator.get());
+      std::make_unique<internal::int8_entropy_calibrator_cached>(
+        param.in_cache_file);
+    b->setInt8Calibrator(calibrator.get());
 
     return build_cxt.build();
 }
 
-std::shared_ptr<model> model::deserialize(std::istream& ist) {
+std::shared_ptr<model>
+model::build_fp32(const std::string& model_dir, double workspace_gb,
+                  int max_batch_size,
+                  std::shared_ptr<plugin::plugin_factory> factory) {
+    build_param_fp32 p(model_dir, workspace_gb, max_batch_size, factory);
+    return build(p);
+}
+
+std::shared_ptr<model>
+model::build_fp16(const std::string& model_dir, double workspace_gb,
+                  int max_batch_size,
+                  std::shared_ptr<plugin::plugin_factory> factory) {
+    build_param_fp16 p(model_dir, workspace_gb, max_batch_size, factory);
+    return build(p);
+}
+
+std::shared_ptr<model>
+model::build_int8(const std::string& model_dir,
+                  std::shared_ptr<calibration_stream> calib_stream,
+                  double workspace_gb, int max_batch_size,
+                  const std::string& out_cache_file,
+                  std::shared_ptr<plugin::plugin_factory> factory) {
+    build_param_int8 p(model_dir, calib_stream, workspace_gb, max_batch_size,
+                       out_cache_file, factory);
+    return build(p);
+}
+
+std::shared_ptr<model>
+model::build_int8_cache(const std::string& model_dir,
+                        const std::string& in_cache_file, double workspace_gb,
+                        int max_batch_size,
+                        std::shared_ptr<plugin::plugin_factory> factory) {
+    if(!in_cache_file.size())
+        std::invalid_argument("in_cache_file shouldn't be empty");
+    build_param_int8_cached p(model_dir, in_cache_file, workspace_gb,
+                              max_batch_size, factory);
+    return build(p);
+}
+
+std::shared_ptr<model>
+model::deserialize(std::istream& ist,
+                   std::shared_ptr<plugin::plugin_factory> factory) {
     // Calculate buffer size for the actual tensorrt serialized data
     const auto current_pos_in_stream = ist.tellg();
     ist.seekg(0, std::ios::end);
@@ -1121,9 +783,6 @@ std::shared_ptr<model> model::deserialize(std::istream& ist) {
     std::vector<char> buf(size);
     ist.read(buf.data(), size);
 
-    // No need to be a smart pointer, since TensorRT destroys it internally
-    auto factory = new plugin::plugin_factory();
-
     // Deserialize
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock(mtx);
@@ -1131,16 +790,18 @@ std::shared_ptr<model> model::deserialize(std::istream& ist) {
     auto runtime = internal::unique_ptr_with_destroyer<nvinfer1::IRuntime>(
       nvinfer1::createInferRuntime(*logger::get_logger()));
     auto p_engine =
-      runtime->deserializeCudaEngine((void*)buf.data(), size, factory);
+      runtime->deserializeCudaEngine((void*)buf.data(), size, factory.get());
     rt_model->engine =
       internal::unique_ptr_with_destroyer<nvinfer1::ICudaEngine>(p_engine);
     rt_model->set_n_inputs_and_outputs();
     return rt_model;
 }
 
-std::shared_ptr<model> model::deserialize(const std::string& model_file) {
+std::shared_ptr<model>
+model::deserialize(const std::string& model_file,
+                   std::shared_ptr<plugin::plugin_factory> factory) {
     std::ifstream ifs(model_file, std::ios::in | std::ios::binary);
-    return model::deserialize(ifs);
+    return model::deserialize(ifs, factory);
 }
 
 void model::serialize(std::ostream& ost) const {

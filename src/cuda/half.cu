@@ -12,25 +12,25 @@
 namespace chainer_trt {
 namespace internal {
 
-    __global__ void float2half_kernel(const float *src, __half *dst, int n) {
+    __global__ void float2half_kernel(const float* src, __half* dst, int n) {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if(n <= idx)
             return;
         dst[idx] = __float2half(src[idx]);
     }
 
-    __global__ void half2float_kernel(const __half *src, float *dst, int n) {
+    __global__ void half2float_kernel(const __half* src, float* dst, int n) {
         const unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if(n <= idx)
             return;
         dst[idx] = __float2half(src[idx]);
     }
 
-    void float2half(const float *src, __half *dst, int n) {
+    void float2half(const float* src, __half* dst, int n) {
         const int block_size = 1024;
         const int grid_size = (int)std::ceil(1.0 * n / block_size);
-        float *src_g = NULL;
-        __half *dst_g = NULL;
+        float* src_g = NULL;
+        __half* dst_g = NULL;
         cudaMalloc(&src_g, sizeof(float) * n);
         cudaMalloc(&dst_g, sizeof(__half) * n);
         cudaMemcpy(src_g, src, sizeof(float) * n, cudaMemcpyHostToDevice);
@@ -40,11 +40,11 @@ namespace internal {
         cudaFree(dst_g);
     }
 
-    void half2float(const __half *src, float *dst, int n) {
+    void half2float(const __half* src, float* dst, int n) {
         const int block_size = 1024;
         const int grid_size = (int)std::ceil(1.0 * n / block_size);
-        __half *src_g = NULL;
-        float *dst_g = NULL;
+        __half* src_g = NULL;
+        float* dst_g = NULL;
         cudaMalloc(&src_g, sizeof(__half) * n);
         cudaMalloc(&dst_g, sizeof(float) * n);
         cudaMemcpy(src_g, src, sizeof(__half) * n, cudaMemcpyHostToDevice);

@@ -94,7 +94,7 @@ TEST_F(ChainerTRT_HPP_Test, GetInputOutput) {
     // Run inference
     rt(buf);
     std::vector<float> out_cpu(infer_batch_size * 3 * 16 * 16, 0.0f);
-    buf.output_device_to_host(std::vector<void *>{(void *)out_cpu.data()});
+    buf.output_device_to_host(std::vector<void*>{(void*)out_cpu.data()});
 
     // Check values (10+1==11)
     for(float y : out_cpu)
@@ -163,9 +163,9 @@ TEST_F(ChainerTRT_HPP_Test, MakeBindingByDict) {
 
     const int size = 3 * 8 * 8;
     float *in1_gpu, *in2_gpu, *out_gpu;
-    cudaMalloc((void **)&in1_gpu, sizeof(float) * size);
-    cudaMalloc((void **)&in2_gpu, sizeof(float) * size);
-    cudaMalloc((void **)&out_gpu, sizeof(float) * size);
+    cudaMalloc((void**)&in1_gpu, sizeof(float) * size);
+    cudaMalloc((void**)&in2_gpu, sizeof(float) * size);
+    cudaMalloc((void**)&out_gpu, sizeof(float) * size);
     const auto in1_cpu = load_values<float>(dir + "/in1.csv");
     const auto in2_cpu = load_values<float>(dir + "/in2.csv");
     std::vector<float> out_cpu(size, 0);
@@ -177,40 +177,39 @@ TEST_F(ChainerTRT_HPP_Test, MakeBindingByDict) {
 
     // check valid binding (by name)
     ASSERT_NO_THROW({
-        rt.create_bindings({{"x1", (void *)in1_gpu},
-                            {"x2", (void *)in2_gpu},
-                            {"out", (void *)out_gpu}});
+        rt.create_bindings({{"x1", (void*)in1_gpu},
+                            {"x2", (void*)in2_gpu},
+                            {"out", (void*)out_gpu}});
     });
 
     // check valid binding (by name, including non-used one)
     ASSERT_NO_THROW({
-        rt.create_bindings({{"x1", (void *)in1_gpu},
-                            {"x2", (void *)in2_gpu},
-                            {"out", (void *)out_gpu},
+        rt.create_bindings({{"x1", (void*)in1_gpu},
+                            {"x2", (void*)in2_gpu},
+                            {"out", (void*)out_gpu},
                             {"ghost", nullptr}});
     });
 
     // check valid binding (pointer vector)
     ASSERT_NO_THROW({
-        rt.create_bindings({(void *)in1_gpu, (void *)in2_gpu},
-                           {(void *)out_gpu});
+        rt.create_bindings({(void*)in1_gpu, (void*)in2_gpu}, {(void*)out_gpu});
     });
 
     // check invalid bindings (insufficient case)
     ASSERT_ANY_THROW({
-        rt.create_bindings({{"x1", (void *)in1_gpu}, {"x2", (void *)in2_gpu}});
+        rt.create_bindings({{"x1", (void*)in1_gpu}, {"x2", (void*)in2_gpu}});
     });
     ASSERT_ANY_THROW({
-        rt.create_bindings({{"x1", (void *)in1_gpu}, {"out", (void *)out_gpu}});
+        rt.create_bindings({{"x1", (void*)in1_gpu}, {"out", (void*)out_gpu}});
     });
     ASSERT_ANY_THROW(
-      { rt.create_bindings({(void *)in1_gpu}, {(void *)out_gpu}); });
+      { rt.create_bindings({(void*)in1_gpu}, {(void*)out_gpu}); });
     ASSERT_ANY_THROW(
-      { rt.create_bindings({(void *)in1_gpu}, {(void *)in1_gpu}); });
+      { rt.create_bindings({(void*)in1_gpu}, {(void*)in1_gpu}); });
 
     // check invalid bindings (too much case)
-    ASSERT_ANY_THROW(rt.create_bindings({(void *)in1_gpu, nullptr, nullptr},
-                                        {(void *)out_gpu}));
+    ASSERT_ANY_THROW(
+      rt.create_bindings({(void*)in1_gpu, nullptr, nullptr}, {(void*)out_gpu}));
 
     // check getting binding index
     ASSERT_EQ(rt.get_binding_index("x1"), 0);
@@ -220,9 +219,9 @@ TEST_F(ChainerTRT_HPP_Test, MakeBindingByDict) {
     ASSERT_ANY_THROW(rt.get_binding_index("ConstantInput-0"));
 
     // check outputs
-    auto bindings = rt.create_bindings({{"x1", (void *)in1_gpu},
-                                        {"x2", (void *)in2_gpu},
-                                        {"out", (void *)out_gpu}});
+    auto bindings = rt.create_bindings({{"x1", (void*)in1_gpu},
+                                        {"x2", (void*)in2_gpu},
+                                        {"out", (void*)out_gpu}});
     ASSERT_EQ((int)bindings.size(), 3); // x1, x2, out
     rt(1, bindings);
 
@@ -238,9 +237,9 @@ TEST_F(ChainerTRT_HPP_Test, InferFromGPUWithName) {
 
     const int size = 3 * 8 * 8;
     float *in1_gpu, *in2_gpu, *out_gpu;
-    cudaMalloc((void **)&in1_gpu, sizeof(float) * size);
-    cudaMalloc((void **)&in2_gpu, sizeof(float) * size);
-    cudaMalloc((void **)&out_gpu, sizeof(float) * size);
+    cudaMalloc((void**)&in1_gpu, sizeof(float) * size);
+    cudaMalloc((void**)&in2_gpu, sizeof(float) * size);
+    cudaMalloc((void**)&out_gpu, sizeof(float) * size);
     const auto in1_cpu = load_values<float>(dir + "/in1.csv");
     const auto in2_cpu = load_values<float>(dir + "/in2.csv");
     std::vector<float> out_cpu(size, 0);

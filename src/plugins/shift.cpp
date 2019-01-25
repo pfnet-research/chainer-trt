@@ -7,8 +7,10 @@
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
 
-#include "../include/cuda/cuda_kernels.hpp"
-#include "../include/plugins/shift.hpp"
+#include <chainer_trt/external/picojson_helper.hpp>
+
+#include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/shift.hpp"
 
 namespace chainer_trt {
 namespace plugin {
@@ -17,6 +19,29 @@ namespace plugin {
       : kw(_kw), kh(_kh), dx(_dx), dy(_dy), c(dims.d[0]), h(dims.d[1]),
         w(dims.d[2]) {
         this->setLaunchConfiguration();
+    }
+
+    nvinfer1::ILayer* shift::build_layer(network_def network,
+                                         const picojson::object& layer_params,
+                                         nvinfer1::DataType dt,
+                                         const name_tensor_map& tensor_names,
+                                         const std::string& model_dir) {
+        (void)dt;
+        (void)model_dir;
+
+        const auto source = param_get<std::string>(layer_params, "source");
+        const int kw = param_get<int>(layer_params, "kw");
+        const int kh = param_get<int>(layer_params, "kh");
+        const int dx = param_get<int>(layer_params, "dx");
+        const int dy = param_get<int>(layer_params, "dy");
+
+        auto source_tensor = tensor_names.find(source);
+        if(source_tensor == tensor_names.end())
+            return NULL;
+
+        nvinfer1::ITensor* input = source_tensor->second;
+        auto p = new plugin::shift(input->getDimensions(), kw, kh, dx, dy);
+        return network->addPluginExt(&input, 1, *p);
     }
 
     shift::shift(const void* buf, size_t size) {

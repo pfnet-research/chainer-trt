@@ -7,8 +7,8 @@
 #include <cuda_runtime_api.h>
 
 #include "chainer_trt/chainer_trt.hpp"
-#include "include/chainer_trt_impl.hpp"
 #include "include/cuda/cuda_kernels.hpp"
+#include "include/plugins/where.hpp"
 #include "test_helper.hpp"
 
 // TODO: Merge to run_plugin_assert_core (need to let it accept multiple inputs)

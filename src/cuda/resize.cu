@@ -29,7 +29,7 @@ namespace plugin {
         const float u_t = (float)(in_h - 1) / max(out_h - 1, 1);
         const float v_t = (float)(in_w - 1) / max(out_w - 1, 1);
 
-        #pragma unroll
+#pragma unroll
         for(unsigned int j = 0; j < (1 << OPT_UNROLL_H); j++) {
             const float u = u_t * ((blockIdx.x << OPT_UNROLL_H) + j);
 
@@ -38,7 +38,7 @@ namespace plugin {
             const float um1 = umax - u;
             const float um2 = u - umin;
 
-            #pragma unroll
+#pragma unroll
             for(unsigned int i = 0; i < (1 << OPT_SPLIT_W); i++) {
                 T* _dst = &dst[j * out_w + (i * out_w >> OPT_SPLIT_W)];
 

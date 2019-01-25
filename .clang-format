@@ -31,6 +31,7 @@ MaxEmptyLinesToKeep: 1
 NamespaceIndentation: 'Inner'
 FixNamespaceComments: false
 PointerAlignment: 'Left'
+DerivePointerAlignment: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: 'Never'
 SpaceInEmptyParentheses: false

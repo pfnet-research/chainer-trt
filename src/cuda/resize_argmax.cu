@@ -29,7 +29,7 @@ namespace plugin {
         unsigned int max_idx[1 << OPT_UNROLL_H] = {0};
         float max_val[1 << OPT_UNROLL_H];
 
-        #pragma unroll
+#pragma unroll
         for(unsigned int j = 0; j < (1 << OPT_UNROLL_H); j++)
             max_val[j] = -INFINITY;
 
@@ -71,7 +71,7 @@ namespace plugin {
             }
         }
 
-        #pragma unroll
+#pragma unroll
         for(unsigned int j = 0; j < (1 << OPT_UNROLL_H); j++) {
             *dst = (T)max_idx[j];
             dst += out_w;

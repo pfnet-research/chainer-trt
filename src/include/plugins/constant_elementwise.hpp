@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "plugins_base.hpp"
+#include <chainer_trt/plugin.hpp>
 
 namespace chainer_trt {
 namespace plugin {
@@ -22,6 +22,11 @@ namespace plugin {
                              const std::vector<float>& _values);
 
         constant_elementwise(const void* buf, size_t size);
+
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
 
         void terminate() override;
 
@@ -43,12 +48,6 @@ namespace plugin {
 
             return dims;
         }
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_constant_elementwise";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
 
         // helpers for test
         nvinfer1::ElementWiseOperation get_op() const { return op; }

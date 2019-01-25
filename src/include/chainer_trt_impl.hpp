@@ -15,10 +15,10 @@
 #include <NvInfer.h>
 #pragma GCC diagnostic pop
 
-#include "plugins/plugins.hpp"
-
 namespace chainer_trt {
 namespace internal {
+    nvinfer1::Dims shapes_to_dims(const picojson::array& shapes);
+
     class weights_manager {
         std::vector<nvinfer1::Weights> weights;
 
@@ -53,13 +53,7 @@ namespace internal {
         nvinfer1::DimsHW
         compute(nvinfer1::DimsHW inputDims, nvinfer1::DimsHW kernelSize,
                 nvinfer1::DimsHW stride, nvinfer1::DimsHW padding,
-                nvinfer1::DimsHW dilation, const char* layerName)
-#if NV_TENSORRT_MAJOR >= 5
-          const override
-#else
-          override
-#endif
-        {
+                nvinfer1::DimsHW dilation, const char* layerName) const {
             (void)dilation;
 
             auto cover_all = cover_all_flags.find(layerName);

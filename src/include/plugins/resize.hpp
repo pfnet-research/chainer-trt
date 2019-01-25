@@ -4,9 +4,7 @@
 
 #pragma once
 
-#include <cassert>
-
-#include "plugins_base.hpp"
+#include <chainer_trt/plugin.hpp>
 
 namespace chainer_trt {
 namespace plugin {
@@ -22,6 +20,10 @@ namespace plugin {
     public:
         resize(int _n_channels, int _in_h, int _in_w, int _out_h, int _out_w);
         resize(const void* buf, size_t size);
+        static nvinfer1::ILayer*
+        build_layer(network_def network, const picojson::object& layer_params,
+                    nvinfer1::DataType dt, const name_tensor_map& tensor_names,
+                    const std::string& model_dir);
 
         size_t getSerializationSize() override { return sizeof(resize); }
 
@@ -33,12 +35,6 @@ namespace plugin {
                                            const nvinfer1::Dims* inputs,
                                            int nbInputDims) override;
         void serialize(void* buf);
-
-        const char* get_plugin_type() const override {
-            return "chainer_trt_resize";
-        }
-
-        const char* get_plugin_version() const override { return "1.0.0"; }
     };
 }
 }

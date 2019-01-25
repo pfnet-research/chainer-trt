@@ -10,7 +10,7 @@
 #include "test_helper.hpp"
 
 template <>
-std::vector<float> load_values(const std::string &filename) {
+std::vector<float> load_values(const std::string& filename) {
     std::vector<float> vals;
     std::ifstream ifs(filename);
     if(!ifs)
@@ -22,7 +22,7 @@ std::vector<float> load_values(const std::string &filename) {
 }
 
 template <>
-std::vector<__half> load_values(const std::string &filename) {
+std::vector<__half> load_values(const std::string& filename) {
     const std::vector<float> vals = load_values<float>(filename);
     std::vector<__half> ret(vals.size());
     chainer_trt::internal::float2half(vals.data(), ret.data(), ret.size());
@@ -30,8 +30,8 @@ std::vector<__half> load_values(const std::string &filename) {
 }
 
 template <>
-void assert_vector_eq(const std::vector<__half> &vec1,
-                      const std::vector<__half> &vec2) {
+void assert_vector_eq(const std::vector<__half>& vec1,
+                      const std::vector<__half>& vec2) {
     ASSERT_EQ(vec1.size(), vec2.size());
     const int n = vec1.size();
     std::vector<float> vec1_f(n);
@@ -42,7 +42,7 @@ void assert_vector_eq(const std::vector<__half> &vec1,
 }
 
 template <>
-std::vector<float> load_values_binary(const std::string &filename) {
+std::vector<float> load_values_binary(const std::string& filename) {
     std::ifstream ifs(filename, std::ios::in | std::ios::binary);
 
     // get filesize
@@ -52,12 +52,12 @@ std::vector<float> load_values_binary(const std::string &filename) {
     ifs.seekg(0);
 
     std::vector<float> ret(fsize / sizeof(float));
-    ifs.read(reinterpret_cast<char *>(ret.data()), ret.size() * sizeof(float));
+    ifs.read(reinterpret_cast<char*>(ret.data()), ret.size() * sizeof(float));
     return ret;
 }
 
 template <>
-std::vector<__half> load_values_binary(const std::string &filename) {
+std::vector<__half> load_values_binary(const std::string& filename) {
     std::vector<float> raw = load_values_binary<float>(filename);
     std::vector<__half> ret(raw.size());
     chainer_trt::internal::float2half(raw.data(), ret.data(), ret.size());
@@ -72,21 +72,21 @@ void assert_eq(int t1, int t2) {
     ASSERT_EQ(t1, t2);
 }
 
-void assert_dims_eq(const nvinfer1::Dims &dim1, const nvinfer1::Dims &dim2) {
+void assert_dims_eq(const nvinfer1::Dims& dim1, const nvinfer1::Dims& dim2) {
     ASSERT_EQ(dim1.nbDims, dim2.nbDims);
     for(int i = 0; i < dim1.nbDims; ++i)
         ASSERT_EQ(dim1.d[i], dim2.d[i]);
 }
 
-void assert_vector_near(const std::vector<float> &vec1,
-                        const std::vector<float> &vec2, float abs_error) {
+void assert_vector_near(const std::vector<float>& vec1,
+                        const std::vector<float>& vec2, float abs_error) {
     ASSERT_EQ(vec1.size(), vec2.size());
     for(unsigned i = 0; i < vec1.size(); ++i)
         EXPECT_NEAR(vec1[i], vec2[i], abs_error);
 }
 
-void assert_vector_near(const std::vector<__half> &vec1,
-                        const std::vector<__half> &vec2, float abs_error) {
+void assert_vector_near(const std::vector<__half>& vec1,
+                        const std::vector<__half>& vec2, float abs_error) {
     ASSERT_EQ(vec1.size(), vec2.size());
     const int n = vec1.size();
     std::vector<float> vec1_f(n);

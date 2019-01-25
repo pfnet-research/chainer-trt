@@ -133,6 +133,36 @@ and so on.
 These plugins can be automatically used when you use corresponding Chainer function in your forward-pass code.
 
 
+#### Developing your own plugin
+
+In case you need your own plugin, there are two ways.
+
+* Implement it as a chainer-trt contribution
+* Implement it outside chainer-trt and tell its existence to chainer-trt
+
+If your plugin is generally useful and non-proprietary,
+please consider implementing it as a part of chainer-trt plugin library,
+so that anyone who uses chainer-trt can make use of it.
+How to implement plugins inside chainer-trt can be learned by looking at
+`src/include/plugins/(plugin_name).hpp` and `src/plugins/(plugin_name).cpp`,
+also `src/plugins/plugin.cpp` to let chainer-trt recognize it.
+
+Otherwise, in order not to disclose the detail of the plugin operator,
+you can implement it *outside* chainer-trt inject to build and load process of an engine.
+This is called *external plugins*.
+The example `example_external_plugin` shows how to implement it.
+
+In either cases, you need to follow these steps.
+
+1. Implement a plugin class by `chainer_trt::plugin::plugin_base<T>`
+  1-1. Implement CUDA kernels that operates the actual process
+  1-2. Write sufficient tests to confirm the kernels work
+2. Implement a builder function (`build_layer` in examples)
+3. Register builder function and deserializer function to plugin factory
+  3-1. In case of internal plugins, you can call it in ctor of `plugin_factory`
+  3-2. In case of external plugins, you can register if after instantiating `plugin_factory`
+
+
 ### Chainer(Cupy) compatible inference interface
 
 chainer-trt provides a thin wrapper of C++ interface so that you can
