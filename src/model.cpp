@@ -464,7 +464,7 @@ namespace internal {
     build_context
     make_network(std::shared_ptr<nvinfer1::IBuilder> builder,
                  const std::string& model_dir, nvinfer1::DataType dt,
-                 std::shared_ptr<plugin::plugin_factory> factory) {
+                 std::shared_ptr<plugin::plugin_factory> factory, bool dla=false) {
         std::ifstream fs;
         fs.open((model_dir + "/model.json").c_str());
 
@@ -618,9 +618,19 @@ namespace internal {
                 continue;
             }
 
+            // Set naming
             l->setName(name.c_str());
             tensor_names[name] = l->getOutput(0);
             l->getOutput(0)->setName(name.c_str());
+
+            // DLA support
+            if(dla) {
+                auto dla_flag = layer_params.find("dla");
+                if(dla_flag != layer_params.end() &&
+                    param_get<bool>(layer_params, "dla")) {
+                    builder->setDeviceType(l, nvinfer1::DeviceType::kDLA);
+                }
+            }
         }
 
         // Configure output layers
@@ -690,8 +700,10 @@ std::shared_ptr<model> model::build(const build_param_fp32& param) {
 std::shared_ptr<model> model::build(const build_param_fp16& param) {
     auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
     b->setHalf2Mode(true);
+    b->allowGPUFallback(true);
     auto nw = internal::make_network(b, param.model_dir,
-                                     nvinfer1::DataType::kHALF, param.factory);
+                                     nvinfer1::DataType::kHALF, param.factory,
+                                     param.dla);
     return nw.build();
 }
 
@@ -742,8 +754,9 @@ model::build_fp32(const std::string& model_dir, double workspace_gb,
 std::shared_ptr<model>
 model::build_fp16(const std::string& model_dir, double workspace_gb,
                   int max_batch_size,
-                  std::shared_ptr<plugin::plugin_factory> factory) {
+                  std::shared_ptr<plugin::plugin_factory> factory, bool dla) {
     build_param_fp16 p(model_dir, workspace_gb, max_batch_size, factory);
+    p.dla = dla;
     return build(p);
 }
 

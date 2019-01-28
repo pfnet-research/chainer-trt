@@ -141,6 +141,8 @@ struct build_param_fp32 : build_param {
  * build_param_fp16 object can be passed to chainer_trt::model::build.
  */
 struct build_param_fp16 : build_param {
+    bool dla = false;
+
     using build_param::build_param; // ctor
 };
 
@@ -292,13 +294,17 @@ public:
      * @param factory Plugin factory. If you implement your own plugin outside
      *   chainer-trt, you have to tell how it's built and called, so you should
      *   register to a plugin factory and pass to this build function.
+     * @param dla Use DLA flag. If the target device has DLA core and you have
+     *   exported your model with DLA option, you can specify true to
+     *   this argument, although it doesn't guarantee DLA to be used.
      * @return Build engine (chainer_trt::model)
      */
     static std::shared_ptr<model>
     build_fp16(const std::string& model_dir, double workspace_gb = 6.0,
                int max_batch_size = 1,
                std::shared_ptr<plugin::plugin_factory> factory =
-                 std::make_shared<plugin::plugin_factory>());
+                 std::make_shared<plugin::plugin_factory>(),
+               bool dla = false);
 
     /**
      * Build an INT8 inference engine. Be noted that performance can be
