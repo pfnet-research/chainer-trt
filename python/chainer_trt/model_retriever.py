@@ -611,6 +611,10 @@ class ModelRetriever(object):
         dump = self._dump_func_map[type(func)]
         layer_param, weights = dump(self, func, initial_param)
 
+        # Check if DLA is specified
+        if hasattr(func, '_chainer_trt_enable_dla'):
+            layer_param['dla'] = True
+
         # Save weights to binary file if exist
         if weights is not None:
             for name, values in weights.items():

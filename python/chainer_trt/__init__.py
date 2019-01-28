@@ -9,6 +9,9 @@ from chainer_trt.model_retriever import ModelRetriever     # NOQA
 from chainer_trt.model_retriever import RetainHook         # NOQA
 from chainer_trt.model_retriever import TracebackHook      # NOQA
 
+from chainer_trt.dla_support import DLA                    # NOQA
+from chainer_trt.dla_support import DLABlock               # NOQA
+
 try:
     from chainer_trt import python_interface               # NOQA
     from chainer_trt.python_interface import Buffer        # NOQA
