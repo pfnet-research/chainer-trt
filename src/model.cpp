@@ -628,7 +628,13 @@ namespace internal {
                 auto dla_flag = layer_params.find("dla");
                 if(dla_flag != layer_params.end() &&
                     param_get<bool>(layer_params, "dla")) {
-                    builder->setDeviceType(l, nvinfer1::DeviceType::kDLA);
+                    if(builder->canRunOnDLA(l)) {
+                        builder->setDeviceType(l, nvinfer1::DeviceType::kDLA);
+                    } else {
+                        auto n = param_get<std::string>(layer_params, "name");
+                        std::cerr << "DLA is specified for \"" << n;
+                        std::cerr << "\" but TensorRT does not support.\n";
+                    }
                 }
             }
         }
