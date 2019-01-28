@@ -12,5 +12,6 @@ option "in-cache"   - "specify filename to calibration cache when using mode=int
 option "out-cache"  - "specify output filename to calibration cache if using mode=int8 (--calib also needs to be specified)" string typestr="filename" default="" no
 option "max-batch"  b "specify the maximum batch size this model is supposed to receive" int typestr="batch-size" default="1" no
 option "workspace"  w "specify workspace size in GB that TensorRT is allowed to use while building the network" int typestr="GB" default="4" no
+option "dla"        - "specify when you want to use DLA (Need '--mode fp16' together)" flag off
 option "verbose"    v "Verbose mode" no
 

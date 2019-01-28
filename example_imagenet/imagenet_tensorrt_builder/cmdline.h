@@ -66,6 +66,8 @@ struct gengetopt_args_info
   int workspace_arg;	/**< @brief specify workspace size in GB that TensorRT is allowed to use while building the network (default='4').  */
   char * workspace_orig;	/**< @brief specify workspace size in GB that TensorRT is allowed to use while building the network original value given at command line.  */
   const char *workspace_help; /**< @brief specify workspace size in GB that TensorRT is allowed to use while building the network help description.  */
+  int dla_flag;	/**< @brief specify when you want to use DLA (Need '--mode fp16' together) (default=off).  */
+  const char *dla_help; /**< @brief specify when you want to use DLA (Need '--mode fp16' together) help description.  */
   const char *verbose_help; /**< @brief Verbose mode help description.  */
   
   unsigned int help_given ;	/**< @brief Whether help was given.  */
@@ -79,6 +81,7 @@ struct gengetopt_args_info
   unsigned int out_cache_given ;	/**< @brief Whether out-cache was given.  */
   unsigned int max_batch_given ;	/**< @brief Whether max-batch was given.  */
   unsigned int workspace_given ;	/**< @brief Whether workspace was given.  */
+  unsigned int dla_given ;	/**< @brief Whether dla was given.  */
   unsigned int verbose_given ;	/**< @brief Whether verbose was given.  */
 
 } ;

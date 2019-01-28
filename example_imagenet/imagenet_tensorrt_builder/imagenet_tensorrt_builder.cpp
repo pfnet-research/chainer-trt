@@ -86,6 +86,8 @@ int main(int argc, char* argv[]) {
         if(!msg.empty())
             msg += "option(s) need to be specified with \"--mode int8\"";
     }
+    if(args.dla_flag && args.mode_arg != std::string("fp16"))
+        msg += "--dla has to be specified together with --mode fp16";
     if(!msg.empty()) {
         std::cerr << msg << std::endl << std::endl;
         cmdline_parser_print_help();
@@ -113,8 +115,10 @@ int main(int argc, char* argv[]) {
           args.dir_arg, args.in_cache_arg, args.workspace_arg,
           args.max_batch_arg);
     } else if(args.mode_arg == std::string("fp16")) {
-        m = chainer_trt::model::build_fp16(args.dir_arg, args.workspace_arg,
-                                           args.max_batch_arg);
+        auto p = chainer_trt::build_param_fp16(args.dir_arg, args.workspace_arg,
+                                               args.max_batch_arg);
+        p.dla = args.dla_flag;
+        m = chainer_trt::model::build(p);
     } else {
         m = chainer_trt::model::build_fp32(args.dir_arg, args.workspace_arg,
                                            args.max_batch_arg);

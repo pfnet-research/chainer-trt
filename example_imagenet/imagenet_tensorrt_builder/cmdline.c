@@ -45,11 +45,13 @@ const char *gengetopt_args_info_help[] = {
   "      --out-cache=filename    specify output filename to calibration cache if\n                                using mode=int8 (--calib also needs to be\n                                specified)  (default=`')",
   "  -b, --max-batch=batch-size  specify the maximum batch size this model is\n                                supposed to receive  (default=`1')",
   "  -w, --workspace=GB          specify workspace size in GB that TensorRT is\n                                allowed to use while building the network\n                                (default=`4')",
+  "      --dla                   specify when you want to use DLA (Need '--mode\n                                fp16' together)  (default=off)",
   "  -v, --verbose               Verbose mode",
     0
 };
 
 typedef enum {ARG_NO
+  , ARG_FLAG
   , ARG_STRING
   , ARG_INT
 } cmdline_parser_arg_type;
@@ -85,6 +87,7 @@ void clear_given (struct gengetopt_args_info *args_info)
   args_info->out_cache_given = 0 ;
   args_info->max_batch_given = 0 ;
   args_info->workspace_given = 0 ;
+  args_info->dla_given = 0 ;
   args_info->verbose_given = 0 ;
 }
 
@@ -110,6 +113,7 @@ void clear_args (struct gengetopt_args_info *args_info)
   args_info->max_batch_orig = NULL;
   args_info->workspace_arg = 4;
   args_info->workspace_orig = NULL;
+  args_info->dla_flag = 0;
   
 }
 
@@ -129,7 +133,8 @@ void init_args_info(struct gengetopt_args_info *args_info)
   args_info->out_cache_help = gengetopt_args_info_help[8] ;
   args_info->max_batch_help = gengetopt_args_info_help[9] ;
   args_info->workspace_help = gengetopt_args_info_help[10] ;
-  args_info->verbose_help = gengetopt_args_info_help[11] ;
+  args_info->dla_help = gengetopt_args_info_help[11] ;
+  args_info->verbose_help = gengetopt_args_info_help[12] ;
   
 }
 
@@ -321,6 +326,8 @@ cmdline_parser_dump(FILE *outfile, struct gengetopt_args_info *args_info)
     write_into_file(outfile, "max-batch", args_info->max_batch_orig, 0);
   if (args_info->workspace_given)
     write_into_file(outfile, "workspace", args_info->workspace_orig, 0);
+  if (args_info->dla_given)
+    write_into_file(outfile, "dla", 0, 0 );
   if (args_info->verbose_given)
     write_into_file(outfile, "verbose", 0, 0 );
   
@@ -534,6 +541,9 @@ int update_arg(void *field, char **orig_field,
     val = possible_values[found];
 
   switch(arg_type) {
+  case ARG_FLAG:
+    *((int *)field) = !*((int *)field);
+    break;
   case ARG_INT:
     if (val) *((int *)field) = strtol (val, &stop_char, 0);
     break;
@@ -564,6 +574,7 @@ int update_arg(void *field, char **orig_field,
   /* store the original value */
   switch(arg_type) {
   case ARG_NO:
+  case ARG_FLAG:
     break;
   default:
     if (value && orig_field) {
@@ -629,6 +640,7 @@ cmdline_parser_internal (
         { "out-cache",	1, NULL, 0 },
         { "max-batch",	1, NULL, 'b' },
         { "workspace",	1, NULL, 'w' },
+        { "dla",	0, NULL, 0 },
         { "verbose",	0, NULL, 'v' },
         { 0,  0, 0, 0 }
       };
@@ -771,6 +783,18 @@ cmdline_parser_internal (
                 &(local_args_info.out_cache_given), optarg, 0, "", ARG_STRING,
                 check_ambiguity, override, 0, 0,
                 "out-cache", '-',
+                additional_error))
+              goto failure;
+          
+          }
+          /* specify when you want to use DLA (Need '--mode fp16' together).  */
+          else if (strcmp (long_options[option_index].name, "dla") == 0)
+          {
+          
+          
+            if (update_arg((void *)&(args_info->dla_flag), 0, &(args_info->dla_given),
+                &(local_args_info.dla_given), optarg, 0, 0, ARG_FLAG,
+                check_ambiguity, override, 1, 0, "dla", '-',
                 additional_error))
               goto failure;
           
