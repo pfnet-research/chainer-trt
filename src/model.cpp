@@ -513,6 +513,9 @@ namespace internal {
             if(type == "input") {
                 internal::build_input(build_cxt.network, layer_params,
                                       tensor_names);
+                if(layer_params.find("value_range") != layer_params.end())
+                    tensor_names[name]->setDynamicRange(0,
+                        param_get<double>(layer_params, "value_range"));
                 continue;
             }
 
@@ -525,6 +528,9 @@ namespace internal {
                 auto source_tensor = tensor_names.find(source);
                 if(source_tensor != tensor_names.end()) {
                     tensor_names[name] = source_tensor->second;
+                    if(layer_params.find("value_range") != layer_params.end())
+                        tensor_names[name]->setDynamicRange(0,
+                            param_get<double>(layer_params, "value_range"));
                     continue;
                 }
             }
@@ -621,6 +627,12 @@ namespace internal {
             l->setName(name.c_str());
             tensor_names[name] = l->getOutput(0);
             l->getOutput(0)->setName(name.c_str());
+
+            if(layer_params.find("value_range") != layer_params.end())
+                tensor_names[name]->setDynamicRange(0,
+                    param_get<double>(layer_params, "value_range"));
+            else
+                tensor_names[name]->setDynamicRange(-10, 10);
         }
 
         // Configure output layers
@@ -699,6 +711,7 @@ std::shared_ptr<model> model::build(const build_param_int8& param) {
     auto b = internal::make_builder(param.workspace_gb, param.max_batch_size);
     std::cout << "Int8 calibration enabled" << std::endl;
     b->setInt8Mode(true);
+    b->setInt8Calibrator(nullptr);
 
     auto build_cxt = internal::make_network(
       b, param.model_dir, nvinfer1::DataType::kFLOAT, param.factory);
@@ -709,7 +722,8 @@ std::shared_ptr<model> model::build(const build_param_int8& param) {
 
     auto calibrator = std::make_unique<internal::int8_entropy_calibrator>(
       dims, param.calib_stream, param.out_cache_file);
-    b->setInt8Calibrator(calibrator.get());
+    //b->setInt8Calibrator(calibrator.get());
+    //b->setStrictTypeConstraints(true);
 
     return build_cxt.build();
 }
