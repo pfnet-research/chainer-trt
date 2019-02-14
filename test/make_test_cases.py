@@ -160,14 +160,14 @@ def sqrt():
 
 @generator(errs=default_err_rough)
 def abs():
-    x = rand((1, 8, 8, 8))
+    x = rand((1, 8, 8, 8)) - 0.5
     y = F.absolute(x)
     return {'input': x}, {'out': y}
 
 
 @generator(errs=default_err_rough)
 def neg():
-    x = rand((1, 8, 8, 8))
+    x = rand((1, 8, 8, 8)) - 0.5
     y = -x
     return {'input': x}, {'out': y}
 
