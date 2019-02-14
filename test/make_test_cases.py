@@ -59,8 +59,8 @@ def generator_set(func):
     func()
 
 
-def rand(s, var=True):
-    x = np.random.rand(*s).astype(np.float32)
+def rand(s, var=True, bias=0):
+    x = np.random.rand(*s).astype(np.float32) + bias
     return chainer.Variable(x) if var else x
 
 
@@ -146,7 +146,7 @@ def exp():
 
 @generator(errs=default_err_rough)
 def log():
-    x = rand((1, 8, 8, 8)) + 1e-10
+    x = rand((1, 8, 8, 8), bias=1e-10)
     y = F.log(x)
     return {'input': x}, {'out': y}
 
@@ -160,21 +160,21 @@ def sqrt():
 
 @generator(errs=default_err_rough)
 def abs():
-    x = rand((1, 8, 8, 8)) - 0.5
+    x = rand((1, 8, 8, 8), bias=-0.5)
     y = F.absolute(x)
     return {'input': x}, {'out': y}
 
 
 @generator(errs=default_err_rough)
 def neg():
-    x = rand((1, 8, 8, 8)) - 0.5
+    x = rand((1, 8, 8, 8), bias=-0.5)
     y = -x
     return {'input': x}, {'out': y}
 
 
 @generator(errs=default_err_rough)
 def recip():
-    x = rand((1, 8, 8, 8)) + 1e-10
+    x = rand((1, 8, 8, 8), bias=1e-10)
     y = 1 / x
     return {'input': x}, {'out': y}
 
