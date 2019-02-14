@@ -359,7 +359,7 @@ class ModelRetriever(object):
 
     def _dump_const_eltw(self, func, initial_param):
         if type(func) == DivFromConstant and func.value == 1:  # reciprocal
-            return _dump_unary(func, initial_param)
+            return self._dump_unary(func, initial_param)
         input_, = func.inputs
         parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name}

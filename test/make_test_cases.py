@@ -168,14 +168,14 @@ def abs():
 @generator(errs=default_err_rough)
 def neg():
     x = rand((1, 8, 8, 8))
-    y = -chainer.Variable(x)
+    y = -x
     return {'input': x}, {'out': y}
 
 
 @generator(errs=default_err_rough)
 def recip():
     x = rand((1, 8, 8, 8)) + 1e-10
-    y = 1 / chainer.Variable(x)
+    y = 1 / x
     return {'input': x}, {'out': y}
 
 
