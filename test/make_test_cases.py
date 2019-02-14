@@ -144,6 +144,41 @@ def exp():
     return {'input': x}, {'out': y}
 
 
+@generator(errs=default_err_rough)
+def log():
+    x = rand((1, 8, 8, 8)) + 1e-10
+    y = F.log(x)
+    return {'input': x}, {'out': y}
+
+
+@generator(errs=default_err_rough)
+def sqrt():
+    x = rand((1, 8, 8, 8))
+    y = F.sqrt(x)
+    return {'input': x}, {'out': y}
+
+
+@generator(errs=default_err_rough)
+def abs():
+    x = rand((1, 8, 8, 8))
+    y = F.absolute(x)
+    return {'input': x}, {'out': y}
+
+
+@generator(errs=default_err_rough)
+def neg():
+    x = rand((1, 8, 8, 8))
+    y = -chainer.Variable(x)
+    return {'input': x}, {'out': y}
+
+
+@generator(errs=default_err_rough)
+def recip():
+    x = rand((1, 8, 8, 8)) + 1e-10
+    y = 1 / chainer.Variable(x)
+    return {'input': x}, {'out': y}
+
+
 @generator(errs=default_err_strict)
 def reshape():
     x = rand((1, 8, 8, 8))
