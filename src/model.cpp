@@ -452,10 +452,24 @@ namespace internal {
             return NULL;
 
         nvinfer1::UnaryOperation op;
-        if(type == "Unary")
-            op = nvinfer1::UnaryOperation::kEXP;
-        else
+        if(type == "Unary") {
+            if(op == "exp")
+                op = nvinfer1::UnaryOperation::kEXP;
+            else if(op == "log")
+                op = nvinfer1::UnaryOperation::kLOG;
+            else if(op == "sqrt")
+                op = nvinfer1::UnaryOperation::kSQRT;
+            else if(op == "recip")
+                op = nvinfer1::UnaryOperation::kRECIP;
+            else if(op == "abs")
+                op = nvinfer1::UnaryOperation::kABS;
+            else if(op == "neg")
+                op = nvinfer1::UnaryOperation::kNEG;
+            else
+                assert(false);
+        } else {
             assert(false);
+        }
 
         nvinfer1::ITensor* input = source_tensor->second;
         return network->addUnary(*input, op);
