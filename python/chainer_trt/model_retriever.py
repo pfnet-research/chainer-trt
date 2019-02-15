@@ -358,6 +358,8 @@ class ModelRetriever(object):
         return self._merge_dicts(initial_param, param), None
 
     def _dump_const_eltw(self, func, initial_param):
+        if type(func) == DivFromConstant and func.value == 1:  # reciprocal
+            return self._dump_unary(func, initial_param)
         input_, = func.inputs
         parent_layer_name = self.get_source_name(input_)
         param = {'source': parent_layer_name}
@@ -430,6 +432,16 @@ class ModelRetriever(object):
         parent_layer_name = self.get_source_name(input_)
         if type(func) == F.math.exponential.Exp:
             op = 'exp'
+        elif type(func) == F.math.exponential.Log:
+            op = 'log'
+        elif type(func) == F.math.sqrt.Sqrt:
+            op = 'sqrt'
+        elif type(func) == F.math.basic_math.Absolute:
+            op = 'abs'
+        elif type(func) == F.math.basic_math.Neg:
+            op = 'neg'
+        elif type(func) == DivFromConstant and func.value == 1:  # reciprocal
+            op = 'recip'
         param = {'source': parent_layer_name, 'operation': op}
         return self._merge_dicts(initial_param, param), None
 
@@ -533,6 +545,10 @@ class ModelRetriever(object):
         F.array.get_item.GetItem: _dump_getitem,
         F.array.where.Where: _dump_where,
         F.math.exponential.Exp: _dump_unary,
+        F.math.exponential.Log: _dump_unary,
+        F.math.sqrt.Sqrt: _dump_unary,
+        F.math.basic_math.Absolute: _dump_unary,
+        F.math.basic_math.Neg: _dump_unary,
         F.math.minmax.ArgMax: _dump_argmax,
         F.math.matmul.MatMul: _dump_matmul,
         chainer_trt.functions.ResizeArgmax: _dump_resize_argmax,

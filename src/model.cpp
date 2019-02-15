@@ -447,15 +447,30 @@ namespace internal {
                                   const name_tensor_map& tensor_names) {
         const auto type = param_get<std::string>(params, "type");
         const auto source = param_get<std::string>(params, "source");
+        const auto operation = param_get<std::string>(params, "operation");
         auto source_tensor = tensor_names.find(source);
         if(source_tensor == tensor_names.end())
             return NULL;
 
-        nvinfer1::UnaryOperation op;
-        if(type == "Unary")
-            op = nvinfer1::UnaryOperation::kEXP;
-        else
+        nvinfer1::UnaryOperation op = nvinfer1::UnaryOperation::kEXP;
+        if(type == "Unary") {
+            if(operation == "exp")
+                op = nvinfer1::UnaryOperation::kEXP;
+            else if(operation == "log")
+                op = nvinfer1::UnaryOperation::kLOG;
+            else if(operation == "sqrt")
+                op = nvinfer1::UnaryOperation::kSQRT;
+            else if(operation == "recip")
+                op = nvinfer1::UnaryOperation::kRECIP;
+            else if(operation == "abs")
+                op = nvinfer1::UnaryOperation::kABS;
+            else if(operation == "neg")
+                op = nvinfer1::UnaryOperation::kNEG;
+            else
+                assert(false);
+        } else {
             assert(false);
+        }
 
         nvinfer1::ITensor* input = source_tensor->second;
         return network->addUnary(*input, op);
