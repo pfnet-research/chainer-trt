@@ -725,6 +725,18 @@ std::shared_ptr<model> model::build(const build_param_int8& param) {
     //b->setInt8Calibrator(calibrator.get());
     //b->setStrictTypeConstraints(true);
 
+    for (int i = 0; i < build_cxt.network->getNbLayers(); ++i)
+    {
+        for (int j = 0; j < build_cxt.network->getLayer(i)->getNbOutputs(); ++j)
+        {
+            build_cxt.network->getLayer(i)->setPrecision(nvinfer1::DataType::kINT8);
+            build_cxt.network->getLayer(i)->setOutputType(j, nvinfer1::DataType::kINT8);
+            std::string name = build_cxt.network->getLayer(i)->getOutput(j)->getName();
+            std::cout << name << " " << build_cxt.network->getLayer(i)->getOutput(j)->getDynamicRange() << std::endl;
+        }
+    }
+    b->setStrictTypeConstraints(true);
+
     return build_cxt.build();
 }
 
