@@ -661,16 +661,18 @@ class ModelRetriever(object):
                     ModelRetriever._save_tensor(weight_path, values)
 
         if self.verbose:
-            out_fn = '{}_output.tensor'.format(layer_name)
-            out_path = '{}/{}'.format(self.dst_path, out_fn)
-            ModelRetriever._save_tensor(out_path, func_outputs.data)
             layer_param['input_shapes'] = [input_.shape
                                            for input_ in func.inputs]
             layer_param['input_types'] = [input_.dtype.name
                                           for input_ in func.inputs]
-            layer_param['output_shape'] = func_outputs.shape
-            layer_param['output_type'] = func_outputs.dtype.name
-            layer_param['output_tensor'] = out_fn
+
+            for i, o in enumerate(func_outputs):
+                out_fn = '{}_{}_output.tensor'.format(layer_name, i)
+                out_path = '{}/{}'.format(self.dst_path, out_fn)
+                ModelRetriever._save_tensor(out_path, o.data)
+                layer_param['output_shape'] = o.shape
+                layer_param['output_type'] = o.dtype.name
+                layer_param['output_tensor'] = out_fn
 
         if hasattr(func, '_TracebackHook__chainer_trt_traceback'):
             layer_param['traceback'] = \
