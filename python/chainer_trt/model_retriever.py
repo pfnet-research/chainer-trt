@@ -39,6 +39,11 @@ def chainer_ver():
 
 class RetainHook(chainer.FunctionHook):
     def forward_postprocess(self, function, in_data):
+        dummy_out = function.forward(in_data)
+        function.retain_outputs(list(range(len(dummy_out))))
+
+        # Do not bring it above the dummy forward pass!!
+        # You will see Linear
         function.retain_inputs(list(range(len(in_data))))
 
 
@@ -88,6 +93,7 @@ class ModelRetriever(object):
         self.output_variables = []
         self.output_names = OrderedDict()
 
+        self.func_outputs = dict()
         self.seen_funcs = set()
         self.naming_map = dict()  # key:string, val:dict(key: func, val: index)
         self.input_name_map = dict()    # key:variable, val:string
@@ -125,10 +131,22 @@ class ModelRetriever(object):
            computational graph
         :return: Found or determined name of its creator
         """
+        if isinstance(input_, chainer.Variable):
+            input_ = input_.node
+        assert isinstance(input_, chainer.variable.VariableNode)
         parent = input_.creator
         if parent is None:      # This is an input layer
             return self._dump_input_and_get_name(input_)
-        return self._get_layer_name(parent)
+        layer_name = self._get_layer_name(parent)
+
+        # Determine output index of the layer,
+        # and concatenate to layer name to make it source tensor identifier
+        for idx, t in enumerate(input_.creator.get_retained_outputs()):
+            # retained outputs are Variables, whereas input_ is a VariableNode
+            if t.node is input_:
+                return '{}_{}'.format(layer_name, idx)
+        raise RuntimeError("Illegal computational graph: "
+                           "Could not identify output index of a source layer")
 
     def _dump_input_and_get_name(self, input_):
         if input_ in self.input_name_map:
@@ -158,6 +176,7 @@ class ModelRetriever(object):
         input_params = {
             'type': input_type,
             'name': input_name,
+            'output_names': [input_name],   # for compat with other layers
             'rank': rank,       # Make sure ConstantInputs come after Inputs
             'shape': list(input_.shape[1:]),    # Eliminate batch dim
         }
@@ -610,7 +629,7 @@ class ModelRetriever(object):
             else:
                 f.write(ar.tobytes())   # py2
 
-    def _dump_function_object(self, func, func_output):
+    def _dump_function_object(self, func, func_outputs):
         assert isinstance(func, chainer.function.Function) or \
             isinstance(func, chainer.function_node.FunctionNode)
         layer_name = self._get_layer_name(func)
@@ -620,9 +639,14 @@ class ModelRetriever(object):
         if self.verbose:
             print(layer_name)
 
+        if not isinstance(func_outputs, list):
+            func_outputs = [func_outputs]
+
         # Find correct type of layer dumper and call it
         initial_param = {
-            'type': layer_type, 'name': layer_name, 'rank': func.rank
+            'type': layer_type, 'name': layer_name, 'rank': func.rank,
+            'output_names': ['{}_{}'.format(layer_name, i)
+                             for i in range(len(func_outputs))]
         }
         dump = self._dump_func_map[type(func)]
         layer_param, weights = dump(self, func, initial_param)
@@ -639,13 +663,13 @@ class ModelRetriever(object):
         if self.verbose:
             out_fn = '{}_output.tensor'.format(layer_name)
             out_path = '{}/{}'.format(self.dst_path, out_fn)
-            ModelRetriever._save_tensor(out_path, func_output.data)
+            ModelRetriever._save_tensor(out_path, func_outputs.data)
             layer_param['input_shapes'] = [input_.shape
                                            for input_ in func.inputs]
             layer_param['input_types'] = [input_.dtype.name
                                           for input_ in func.inputs]
-            layer_param['output_shape'] = func_output.shape
-            layer_param['output_type'] = func_output.dtype.name
+            layer_param['output_shape'] = func_outputs.shape
+            layer_param['output_type'] = func_outputs.dtype.name
             layer_param['output_tensor'] = out_fn
 
         if hasattr(func, '_TracebackHook__chainer_trt_traceback'):
@@ -681,28 +705,35 @@ class ModelRetriever(object):
 
         self.output_variables.append(var)
 
-        output_name = self._get_layer_name(var.creator)
+        output_name = self.get_source_name(var)
         self.output_names[output_name] = output_name if name is None else name
 
         if var.creator in self.seen_funcs:
             return self
 
         funcs = [(var.creator, var)]
-        self.seen_funcs.add(var.creator)
-
-        # retrieval loop
         while funcs:
             func, func_output = funcs.pop(0)
-            self._dump_function_object(func, func_output)
 
-            inputs = func.inputs
-            for _input in inputs:
+            if func not in self.func_outputs:
+                self.func_outputs[func] = []
+            self.func_outputs[func].append(func_output)
+
+            outputs = func.get_retained_outputs()
+            assert outputs is not None and 1 <= len(outputs), \
+                "Please use RetainHook"
+            if len(outputs) != len(self.func_outputs[func]):
+                continue
+
+            self._dump_function_object(func, self.func_outputs[func])
+            self.seen_funcs.add(func)
+            for _input in func.inputs:
                 creator = _input.creator
                 if creator is not None and creator not in self.seen_funcs:
                     assert isinstance(creator, chainer.function.Function) or \
                         isinstance(creator, chainer.function_node.FunctionNode)
                     funcs.append((creator, _input))
-                    self.seen_funcs.add(creator)
+
         return self
 
     def preprocess_caffemodel(self, net):
@@ -807,11 +838,25 @@ class ModelRetriever(object):
                 break
 
             # sweep
-            new_layers = [layer for layer in self.layers
-                          if layer['name'] in used_sources]
-            current_layer_names = set([t['name']for t in self.layers])
-            new_layer_names = set([t['name'] for t in new_layers])
-            removed_layer_names |= current_layer_names - new_layer_names
+            new_layers = []
+            for layer in self.layers:
+                if layer['type'] in ('input', 'ConstantInput'):
+                    new_layers.append(layer)
+                    continue
+
+                sweep = True
+                for l in layer['output_names']:
+                    if l in used_sources:
+                        sweep = False
+                        break
+                if not sweep:
+                    new_layers.append(layer)
+                else:
+                    removed_layer_names.add(layer['name'])
+
+            # If no layers are swept, it converges.
+            if len(self.layers) == len(new_layers):
+                break
             self.layers = new_layers
 
         if self.verbose:

@@ -633,9 +633,17 @@ namespace internal {
                 continue;
             }
 
+            // Set layer name
             l->setName(name.c_str());
-            tensor_names[name] = l->getOutput(0);
-            l->getOutput(0)->setName(name.c_str());
+
+            // Set layer output names
+            auto out_names =
+              param_get<picojson::array>(layer_params, "output_names");
+            for(unsigned i = 0; i < out_names.size(); ++i) {
+                auto out_name = out_names[i].get<std::string>();
+                tensor_names[out_name] = l->getOutput(i);
+                l->getOutput(i)->setName(out_name.c_str());
+            }
         }
 
         // Configure output layers
