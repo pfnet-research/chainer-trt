@@ -1,7 +1,6 @@
 import chainer
 import chainer.functions as F
 import numpy as np
-import json
 
 from helper import ModelRetrieverHelper
 
