@@ -536,10 +536,17 @@ namespace internal {
             // Check copy layer
             if(type == "Copy") {
                 const std::string& source =
-                  layer_params.find("source")->second.get<std::string>();
+                    layer_params.find("source")->second.get<std::string>();
                 auto source_tensor = tensor_names.find(source);
                 if(source_tensor != tensor_names.end()) {
-                    tensor_names[name] = source_tensor->second;
+                    // Not to create an layer instance,
+                    // just re-use the input layer as its output.
+                    auto out_names = param_get<picojson::array>(
+                        layer_params, "output_names");
+                    if(out_names.size() != 1)
+                        throw std::runtime_error("Invalid copy layer");
+                    auto out_name = out_names[0].get<std::string>();
+                    tensor_names[out_name] = source_tensor->second;
                     continue;
                 }
             }
