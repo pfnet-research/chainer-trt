@@ -147,7 +147,7 @@ TEST_F(ChainerTRT_HPP_Test, MakeBindingByDict) {
     // s = (1, 3, 8, 8)
     // x1 = chainer.Variable(np.random.random(s).astype(np.float32))
     // x2 = chainer.Variable(np.random.random(s).astype(np.float32))
-    // c = 2 * chainer.Variable(np.ones(s).astype(np.float32))
+    // c = 2 * np.ones(s).astype(np.float32)
     // with chainer.using_config('train', False):
     //     with RetainHook():
     //         y = x1 + x2
