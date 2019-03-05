@@ -64,5 +64,5 @@ class TestInputs(ModelRetrieverHelper):
         assert len(j['outputs']) == 2
         y2_id, y2_name = j['outputs'][0]
         y1_id, y1_name = j['outputs'][1]
-        assert y2_id == 'MulConstant-1-1' and y2_name == 'y2'
-        assert y1_id == 'AddConstant-0-1' and y1_name == 'y1'
+        assert y2_id == 'MulConstant-1-1_0' and y2_name == 'y2'
+        assert y1_id == 'AddConstant-0-1_0' and y1_name == 'y1'
