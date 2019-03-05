@@ -509,10 +509,6 @@ def main():
             open(out + '/' + fn, "wt").write(atos(y))
             output_shapes.append(y.shape[1:])
 
-        # Currently only 1 output is supported...
-        assert len(output_csv_names) == 1, \
-            "Currently only 1 output is supported..."
-
         # Save dumped test case network (model.json)
         retriever.save()
 
@@ -521,8 +517,8 @@ def main():
             for dtype, error in zip(['kFLOAT', 'kHALF', 'kINT8'], errs):
                 test_cases.append({
                     "fixture": case_name, "inputs": input_csv_names,
-                    "expected_output": output_csv_names[0],
-                    "output_dims": output_shapes[0],
+                    "expected_outputs": output_csv_names,
+                    "output_dims": output_shapes,
                     "batch_size": bs, "dtype": dtype,
                     "acceptable_absolute_error": error,
 
