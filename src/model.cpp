@@ -539,7 +539,14 @@ namespace internal {
                   layer_params.find("source")->second.get<std::string>();
                 auto source_tensor = tensor_names.find(source);
                 if(source_tensor != tensor_names.end()) {
-                    tensor_names[name] = source_tensor->second;
+                    // Not to create an layer instance,
+                    // just re-use the input layer as its output.
+                    auto out_names =
+                      param_get<picojson::array>(layer_params, "output_names");
+                    if(out_names.size() != 1)
+                        throw std::runtime_error("Invalid copy layer");
+                    auto out_name = out_names[0].get<std::string>();
+                    tensor_names[out_name] = source_tensor->second;
                     continue;
                 }
             }
@@ -633,9 +640,17 @@ namespace internal {
                 continue;
             }
 
+            // Set layer name
             l->setName(name.c_str());
-            tensor_names[name] = l->getOutput(0);
-            l->getOutput(0)->setName(name.c_str());
+
+            // Set layer output names
+            auto out_names =
+              param_get<picojson::array>(layer_params, "output_names");
+            for(unsigned i = 0; i < out_names.size(); ++i) {
+                auto out_name = out_names[i].get<std::string>();
+                tensor_names[out_name] = l->getOutput(i);
+                l->getOutput(i)->setName(out_name.c_str());
+            }
         }
 
         // Configure output layers
