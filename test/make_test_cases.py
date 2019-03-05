@@ -548,6 +548,8 @@ def main():
                     "output_dims": output_shapes,
                     "batch_size": bs, "dtype": dtype,
                     "acceptable_absolute_error": error,
+                    "external_plugins": [f.__name__ for f
+                                         in custom_dump_functions.keys()],
 
                     # This is only used for int8 mode
                     "int8_calib_cache": int8_calib_cache
