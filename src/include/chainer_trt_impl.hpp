@@ -142,7 +142,7 @@ namespace internal {
             (void)cache;
             (void)length;
 
-            throw std::runtime_error("This shouldn't be called");
+            // Do nothing even if it is called
         }
     };
 }
